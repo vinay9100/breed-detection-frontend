@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+sqlalchemy
+pymysql
+passlib[bcrypt]
+PyJWT
+pydantic[email]
+python-dotenv
+fastapi-mail
+ultralytics
+python-multipart
+pillow
