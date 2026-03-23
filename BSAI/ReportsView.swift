@@ -7,6 +7,7 @@ struct ReportsView: View {
     @State private var selectedFilter: ReportFilter = .all
     @State private var scans: [DetectionRecord] = []
     @State private var isLoading = false
+    @ObservedObject private var localization = LocalizationManager.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -21,7 +22,7 @@ struct ReportsView: View {
                 }
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .sheet(isPresented: $showFilters) {
             ReportsFilterSheet(selectedFilter: $selectedFilter)
         }
@@ -44,7 +45,7 @@ struct ReportsView: View {
     
     private var header: some View {
         HStack {
-            Text("Reports")
+            Text(localization.t("reports_title"))
                 .font(.largeTitle.bold())
             
             Spacer()
@@ -65,15 +66,28 @@ struct ReportsView: View {
     
     private var latestAnalysisCard: some View {
         Button(action: {
-            path.append(.reportPreview)
+            if let firstScan = scans.first {
+                let prediction = PredictResponse(
+                    breed_name: firstScan.breed_name,
+                    confidence_score: firstScan.confidence_score,
+                    yield_estimate: firstScan.yield_estimate,
+                    milk_yield_range: firstScan.milk_yield_range,
+                    animal_type: firstScan.animal_type,
+                    fat_content: firstScan.fat_content,
+                    image_url: firstScan.image_path,
+                    message: nil
+                )
+                AuthManager.shared.currentPrediction = prediction
+                path.append(.detectionResult)
+            }
         }) {
             HStack {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Latest Analysis")
+                    Text(localization.t("reports_latest_analysis"))
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.white.opacity(0.8))
                     
-                    Text("\(scans.first?.breed_name ?? "No Scans Yet")")
+                    Text("\(scans.first?.breed_name ?? localization.t("reports_no_scans"))")
                         .font(.title2.bold())
                         .foregroundColor(.white)
                 }
@@ -104,17 +118,34 @@ struct ReportsView: View {
     
     private var pastReportsSection: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Past Reports")
+            Text(localization.t("reports_past_reports"))
                 .font(.headline)
                 .padding(.horizontal, 24)
             
             VStack(spacing: 14) {
                 ForEach(scans) { scan in
-                    ReportHistoryRow(
-                        title: scan.breed_name,
-                        date: formatDate(scan.detected_at),
-                        type: "Detection"
-                    )
+                    Button(action: {
+                        // Load this scan's data into the shared prediction state
+                        let prediction = PredictResponse(
+                            breed_name: scan.breed_name,
+                            confidence_score: scan.confidence_score,
+                            yield_estimate: scan.yield_estimate,
+                            milk_yield_range: scan.milk_yield_range,
+                            animal_type: scan.animal_type,
+                            fat_content: scan.fat_content,
+                            image_url: scan.image_path,
+                            message: nil
+                        )
+                        AuthManager.shared.currentPrediction = prediction
+                        path.append(.detectionResult)
+                    }) {
+                        ReportHistoryRow(
+                            title: scan.breed_name,
+                            date: formatDate(scan.detected_at),
+                            type: "Detection"
+                        )
+                    }
+                    .buttonStyle(ScaleButtonStyle())
                 }
             }
             .padding(.horizontal, 24)
@@ -156,10 +187,11 @@ enum ReportFilter: String {
 struct ReportsFilterSheet: View {
     @Binding var selectedFilter: ReportFilter
     @Environment(\.dismiss) var dismiss
+    @ObservedObject private var localization = LocalizationManager.shared
     
     var body: some View {
         VStack(spacing: 25) {
-            Text("Filter Reports")
+            Text(localization.t("reports_filter_title"))
                 .font(.title2.bold())
             
             ForEach([ReportFilter.all, .monthly, .annual], id: \.self) { filter in
@@ -179,7 +211,7 @@ struct ReportsFilterSheet: View {
                         }
                     }
                     .padding()
-                    .background(Color.gray.opacity(0.08))
+                    .background(Color.appBackground)
                     .cornerRadius(12)
                 }
             }
@@ -233,19 +265,30 @@ struct ReportHistoryRow: View {
                 .foregroundColor(.gray.opacity(0.3))
         }
         .padding(16)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(18)
-        .shadow(color: Color.black.opacity(0.02), radius: 5, x: 0, y: 2)
+        .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
     }
 }
 
 private func formatDate(_ dateStr: String) -> String {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let date = formatter.date(from: dateStr) {
-        let displayFormatter = DateFormatter()
-        displayFormatter.dateStyle = .medium
-        return displayFormatter.string(from: date)
+    // Try with fractional seconds first
+    let formatter1 = ISO8601DateFormatter()
+    formatter1.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = formatter1.date(from: dateStr) {
+        let display = DateFormatter()
+        display.dateStyle = .medium
+        display.timeStyle = .short
+        return display.string(from: date)
+    }
+    // Try without fractional seconds
+    let formatter2 = ISO8601DateFormatter()
+    formatter2.formatOptions = [.withInternetDateTime]
+    if let date = formatter2.date(from: dateStr) {
+        let display = DateFormatter()
+        display.dateStyle = .medium
+        display.timeStyle = .short
+        return display.string(from: date)
     }
     return dateStr
 }

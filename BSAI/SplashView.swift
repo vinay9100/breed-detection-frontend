@@ -32,14 +32,12 @@ struct SplashView: View {
                     
                     // Main Icon
                     ZStack {
-                        Circle()
-                            .fill(Color.white)
-                            .frame(width: 100, height: 100)
-                            .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: 10)
-                        
-                        Image(systemName: "leaf.fill")
-                            .font(.system(size: 45, weight: .bold))
-                            .foregroundColor(Color(hex: "00A661"))
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 120, height: 120)
+                            .clipShape(Circle())
+                            .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
                     }
                     .scaleEffect(iconScale)
                     .opacity(iconOpacity)

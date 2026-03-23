@@ -1,37 +1,43 @@
 import SwiftUI
+import CoreLocation
+import Combine
 
 struct HomeView: View {
     @Binding var path: [AppRoute]
     @State private var appeared = false
     
+    @ObservedObject var localization = LocalizationManager.shared
+    
     // State for Dynamic Data
     @State private var analytics: AnalyticsSummaryResponse? = nil
     @State private var activities: [RecentActivity] = []
+    @State private var vaccinations: [VaccinationRecord] = []
+    @State private var alerts: [DiseaseAlert] = []
     @State private var isLoading = false
+    
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
+    @StateObject private var locationManager = LocationManager()
 
     var body: some View {
         ZStack {
-            Color(hex: "F9FBF9").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 headerSection
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 30) {
+                        if !alerts.isEmpty {
+                            diseaseAlertsSection
+                        }
+                        
                         statsRow
-                            .opacity(appeared ? 1 : 0)
-                            .offset(y: appeared ? 0 : 20)
-                            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: appeared)
+                        
+                        vaccinationRemindersSection
                         
                         recentActivitySection
-                            .opacity(appeared ? 1 : 0)
-                            .offset(y: appeared ? 0 : 20)
-                            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.4), value: appeared)
                         
                         bottomActionsGrid
-                            .opacity(appeared ? 1 : 0)
-                            .offset(y: appeared ? 0 : 20)
-                            .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.5), value: appeared)
                     }
                     .padding(.top, 15)
                     .padding(.bottom, 30)
@@ -41,9 +47,14 @@ struct HomeView: View {
         .onAppear {
             loadAnalytics()
             fetchActivity()
+            fetchVaccinations()
+            fetchAlerts()
             withAnimation {
                 appeared = true
             }
+        }
+        .onChange(of: locationManager.location) { _ in
+            fetchAlerts()
         }
     }
     
@@ -65,6 +76,25 @@ struct HomeView: View {
         }
     }
     
+    private func fetchVaccinations() {
+        AuthManager.shared.fetchVaccinations { result in
+            if case .success(let data) = result {
+                self.vaccinations = data
+            }
+        }
+    }
+    
+    private func fetchAlerts() {
+        AuthManager.shared.fetchAlerts(
+            lat: locationManager.location?.coordinate.latitude,
+            lon: locationManager.location?.coordinate.longitude
+        ) { result in
+            if case .success(let data) = result {
+                self.alerts = data
+            }
+        }
+    }
+
     // MARK: - Header Section
     
     private var headerSection: some View {
@@ -73,10 +103,10 @@ struct HomeView: View {
                 
                 // 🔹 Left Greeting + Right Logout
                 HStack {
-                    let userName = AuthManager.shared.currentUser?.fullName.split(separator: " ").first.map(String.init) ?? "Farmer"
-                    let greetingText = GreetingHelper.getGreeting(for: userName)
+                    let userName = AuthManager.shared.currentUser?.fullName.split(separator: " ").first.map(String.init) ?? localization.t("common_farmer")
+                    let greetingKey = getGreetingKey()
                     
-                    Text("\(greetingText) 👋")
+                    Text("\(localization.t(greetingKey)), \(userName) 👋")
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .lineLimit(1)
@@ -92,7 +122,7 @@ struct HomeView: View {
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.white)
                             .padding(8)
-                            .background(Color.white.opacity(0.2))
+                            .background(Color.white.opacity(0.15))
                             .clipShape(Circle())
                     }
                 }
@@ -102,7 +132,7 @@ struct HomeView: View {
                 .offset(y: appeared ? 0 : -20)
                 .animation(.easeOut(duration: 0.6).delay(0.1), value: appeared)
                 
-                Text("Ready to scan your livestock?")
+                Text(localization.t("home_ready_to_scan"))
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.white.opacity(0.85))
                     .padding(.horizontal, 24)
@@ -133,7 +163,7 @@ struct HomeView: View {
                         .offset(x: 160, y: 10)
                 }
                 .clipShape(RoundedCorner(radius: 30, corners: [.bottomLeft, .bottomRight]))
-                .shadow(color: Color(hex: "00A661").opacity(0.15), radius: 20, x: 0, y: 15)
+                .shadow(color: Color.primaryGreen.opacity(0.2), radius: 20, x: 0, y: 15)
                 .ignoresSafeArea(edges: .top)
             )
         }
@@ -155,15 +185,15 @@ struct HomeView: View {
                     
                     Image(systemName: "viewfinder")
                         .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(Color(hex: "00A661"))
+                        .foregroundColor(Color.primaryGreen)
                 }
                 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Scan Animal")
+                    Text(localization.t("home_scan_animal"))
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     
-                    Text("AI-powered breed detection")
+                    Text(localization.t("home_ai_detection"))
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                 }
@@ -190,11 +220,125 @@ struct HomeView: View {
             .padding(20)
             .background(
                 RoundedRectangle(cornerRadius: 32)
-                    .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.06), radius: 25, x: 0, y: 12)
+                    .fill(Color.cardBackground)
+                    .shadow(color: Color.shadowColor, radius: 25, x: 0, y: 12)
             )
         }
         .buttonStyle(EnhancedRoleButtonStyle())
+    }
+
+    private var diseaseAlertsSection: some View {
+        VStack(spacing: 12) {
+            ForEach(alerts) { alert in
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.white)
+                        Text(alert.disease_name)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                        Spacer()
+                        Text(alert.severity)
+                            .font(.system(size: 12, weight: .bold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.white.opacity(0.2))
+                            .cornerRadius(8)
+                            .foregroundColor(.white)
+                    }
+                    
+                    Text(alert.message)
+                        .font(.system(size: 14))
+                        .foregroundColor(.white.opacity(0.9))
+                    
+                    HStack {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 12))
+                        Text(alert.location)
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundColor(.white.opacity(0.8))
+                }
+                .padding(20)
+                .background(
+                    LinearGradient(
+                        colors: alert.severity == "High" ? [Color.red, Color(hex: "D32F2F")] : [Color.orange, Color(hex: "F57C00")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .cornerRadius(24)
+                .shadow(color: (alert.severity == "High" ? Color.red : Color.orange).opacity(0.3), radius: 10, x: 0, y: 5)
+            }
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private func getGreetingKey() -> String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour < 12 { return "home_greeting_morning" }
+        else if hour < 17 { return "home_greeting_afternoon" }
+        else { return "home_greeting_evening" }
+    }
+
+    private var vaccinationRemindersSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                Text(localization.t("home_vaccination_reminders"))
+                    .font(.system(size: 18, weight: .bold))
+                Spacer()
+                Button(action: { path.append(.vaccinationPlanner) }) {
+                    Text(localization.t("home_see_all"))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color(hex: "00A661"))
+                }
+            }
+            .padding(.horizontal, 24)
+            
+            VStack(spacing: 12) {
+                let upcoming = vaccinations.filter { $0.status != "completed" }.prefix(2)
+                
+                if upcoming.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.green.opacity(0.5))
+                        Text(localization.t("common_all_caught_up"))
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .background(Color.cardBackground)
+                    .cornerRadius(20)
+                } else {
+                    ForEach(upcoming) { vax in
+                        VaccinationReminderRow(
+                            title: vax.vaccine_name,
+                            subtitle: vax.type ?? "Scheduled",
+                            time: formatDate(vax.planned_date),
+                            color: .orange
+                        )
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+        }
+    }
+
+    private func formatDate(_ isoString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = formatter.date(from: isoString)
+        if date == nil {
+            formatter.formatOptions = [.withInternetDateTime]
+            date = formatter.date(from: isoString)
+        }
+        
+        guard let d = date else { return isoString }
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateStyle = .short
+        return displayFormatter.string(from: d)
     }
     
     // MARK: - Stats
@@ -202,13 +346,13 @@ struct HomeView: View {
     private var statsRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
-                StatsCard(icon: "viewfinder", value: "\(analytics?.total_animals ?? 0)", label: "Total Scans", color: Color(hex: "00A661")) {
+                StatsCard(icon: "viewfinder", value: "\(analytics?.total_animals ?? 0)", label: localization.t("home_total_scans"), color: Color(hex: "00A661")) {
                     path.append(.scanHistory)
                 }
-                StatsCard(icon: "waveform.path", value: "\(Int(analytics?.average_accuracy ?? 0))%", label: "Avg. Confidence", color: .blue) {
+                StatsCard(icon: "waveform.path", value: "\(Int(analytics?.average_accuracy ?? 0))%", label: localization.t("home_avg_confidence"), color: .blue) {
                     path.append(.analyticsHub)
                 }
-                StatsCard(icon: "chart.line.uptrend.xyaxis", value: "\(analytics?.total_animals ?? 0)", label: "Herd Size", color: .purple) {
+                StatsCard(icon: "chart.line.uptrend.xyaxis", value: "\(analytics?.total_animals ?? 0)", label: localization.t("home_herd_size"), color: .purple) {
                     path.append(.herdSummary)
                 }
             }
@@ -220,10 +364,10 @@ struct HomeView: View {
     private var recentActivitySection: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
-                Text("Recent Activity")
+                Text(localization.t("home_recent_activity"))
                     .font(.system(size: 18, weight: .bold))
                 Spacer()
-                Button("See All") {
+                Button(localization.t("home_see_all")) {
                     path.append(.scanHistory)
                 }
                 .font(.system(size: 14, weight: .semibold))
@@ -236,13 +380,13 @@ struct HomeView: View {
                     Image(systemName: "clock.badge.exclamationmark")
                         .font(.system(size: 30))
                         .foregroundColor(.secondary.opacity(0.5))
-                    Text("No recent activity found")
+                    Text(localization.t("home_no_activity"))
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 30)
-                .background(Color.white)
+                .background(Color.cardBackground)
                 .cornerRadius(24)
                 .padding(.horizontal, 24)
             } else {
@@ -257,11 +401,11 @@ struct HomeView: View {
     }
     private var bottomActionsGrid: some View {
         HStack(spacing: 16) {
-            QuickActionSmallCard(icon: "waveform.path", title: "Compare Breeds", color: .blue) {
+            QuickActionSmallCard(icon: "waveform.path", title: localization.t("home_compare_breeds"), color: .blue) {
                 path.append(.breedComparison)
             }
             
-            QuickActionSmallCard(icon: "chart.line.uptrend.xyaxis", title: "Predict Yield", color: .purple) {
+            QuickActionSmallCard(icon: "chart.line.uptrend.xyaxis", title: localization.t("home_predict_yield"), color: .purple) {
                 path.append(.yieldPrediction)
             }
         }
@@ -269,7 +413,48 @@ struct HomeView: View {
     }
 }
 
+struct VaccinationReminderRow: View {
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
+    let title: String
+    let subtitle: String
+    let time: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 15) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.1))
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: "syringe.fill")
+                    .foregroundColor(color)
+                    .font(.system(size: 18))
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 15, weight: .bold))
+                Text(subtitle)
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            Text(time)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(.secondary)
+        }
+        .padding(16)
+        .background(Color.cardBackground)
+        .cornerRadius(20)
+        .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
+    }
+}
+
 struct HomeActivityRow: View {
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
     let activity: RecentActivity
     
     var body: some View {
@@ -299,15 +484,16 @@ struct HomeActivityRow: View {
                 .foregroundColor(.secondary)
         }
         .padding(16)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.02), radius: 5, x: 0, y: 2)
+        .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
     }
 }
 
 // MARK: - Quick Action Card
 
 struct QuickActionSmallCard: View {
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
     let icon: String
     let title: String
     let color: Color
@@ -332,30 +518,37 @@ struct QuickActionSmallCard: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 25)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(24)
-            .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
+            .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
         }
         .buttonStyle(ScaleButtonStyle())
     }
 }
 
-// MARK: - Greeting Helper
-
-struct GreetingHelper {
-    static func getGreeting(for name: String) -> String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        
-        if hour < 12 {
-            return "Good Morning, \(name)"
-        } else if hour < 17 {
-            return "Good Afternoon, \(name)"
-        } else {
-            return "Good Evening, \(name)"
-        }
-    }
-}
 
 #Preview {
-    HomeView(path: .constant([]))
+    HomeView(path: .constant([AppRoute]()))
+}
+
+class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+    @Published var location: CLLocation?
+    @Published var authorizationStatus: CLAuthorizationStatus?
+    
+    override init() {
+        super.init()
+        manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.requestWhenInUseAuthorization()
+        manager.startUpdatingLocation()
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        location = locations.last
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        authorizationStatus = status
+    }
 }

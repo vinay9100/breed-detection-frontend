@@ -3,7 +3,8 @@ import SwiftUI
 struct BPAAnimalRegistrationView: View {
     @Binding var path: [AppRoute]
     
-    @State private var earTagNumber = ""
+    @State private var earTagNumber = "ET-"
+    @State private var animalName = ""
     @State private var species = ""
     @State private var sex = ""
     @State private var breed = ""
@@ -15,8 +16,10 @@ struct BPAAnimalRegistrationView: View {
     @State private var district = ""
     @State private var stateName = ""
     @State private var showDatePicker = false
-    @State private var selectedDate = Date()
+    @State private var selectedDate = Calendar.current.date(byAdding: .month, value: -18, to: Date()) ?? Date()
     @State private var appeared = false
+    
+    @ObservedObject private var authManager = AuthManager.shared
     
     let indianStates: [String: [String]] = [
         "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore"],
@@ -51,7 +54,7 @@ struct BPAAnimalRegistrationView: View {
     
     var body: some View {
         ZStack {
-            Color(red: 248/255, green: 251/255, blue: 249/255).ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 headerSection
@@ -75,6 +78,7 @@ struct BPAAnimalRegistrationView: View {
                 DatePicker(
                     "Select Date of Birth",
                     selection: $selectedDate,
+                    in: ...Calendar.current.date(byAdding: .month, value: -18, to: Date())!,
                     displayedComponents: [.date]
                 )
                 .datePickerStyle(GraphicalDatePickerStyle())
@@ -96,6 +100,25 @@ struct BPAAnimalRegistrationView: View {
         .onAppear {
             withAnimation(.easeOut(duration: 0.6)) {
                 appeared = true
+            }
+        }
+        .onChange(of: authManager.currentPrediction) { newPrediction in
+            if let prediction = newPrediction, prediction.message == nil {
+                // Auto-fill from AI scan results
+                if let detectedBreed = prediction.breed_name {
+                    breed = detectedBreed
+                    // REQUIREMENT: Populate animal name if breed is detected (e.g. Toda)
+                    if animalName.isEmpty || animalName == "Toda" {
+                        animalName = detectedBreed
+                    }
+                }
+                if let type = prediction.animal_type {
+                    if type.lowercased() == "cow" {
+                        species = "Cattle"
+                    } else {
+                        species = type
+                    }
+                }
             }
         }
     }
@@ -132,14 +155,14 @@ struct BPAAnimalRegistrationView: View {
             .padding(.top, 20)   // reduced header height
             .padding(.bottom, 25)
         }
-        .background(
-            LinearGradient(
-                colors: [Color(red: 0, green: 200/255, blue: 83/255), Color(red: 0, green: 141/255, blue: 67/255)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+            .background(
+                LinearGradient(
+                    colors: [Color.primaryGreen, Color(hex: "008D43")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
             )
-            .ignoresSafeArea()
-        )
     }
     
     private var animalInformationCard: some View {
@@ -154,12 +177,14 @@ struct BPAAnimalRegistrationView: View {
                 }
                 Text("Animal Information")
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(Color(red: 27/255, green: 94/255, blue: 32/255))
+                    .foregroundColor(.primary)
             }
             
             VStack(alignment: .leading, spacing: 15) {
                 
                 inputField(label: "Ear Tag Number *", placeholder: "ET-2024-XXXX", text: $earTagNumber)
+                
+                inputField(label: "Animal Name", placeholder: "Enter animal name or alias (Optional)", text: $animalName)
                 
                 HStack(spacing: 15) {
                     
@@ -215,7 +240,8 @@ struct BPAAnimalRegistrationView: View {
                             .font(.system(size: 15))
                         
                         Button(action: {
-                            path.append(.bpaCamera)
+                            hideKeyboard()
+                            path.append(.bpaCamera(earTag: earTagNumber))
                         }) {
                             HStack(spacing: 6) {
                                 Image(systemName: "camera.fill")
@@ -231,7 +257,7 @@ struct BPAAnimalRegistrationView: View {
                     }
                     .padding(8)
                     .padding(.leading, 8)
-                    .background(Color(red: 243/255, green: 246/255, blue: 255/255))
+                    .background(Color.primaryGreen.opacity(0.05))
                     .cornerRadius(12)
                     
                     HStack(spacing: 4) {
@@ -261,11 +287,16 @@ struct BPAAnimalRegistrationView: View {
                         .background(Color.gray.opacity(0.05))
                         .cornerRadius(12)
                     }
+                    
+                    Text("* Animal must be at least 1.5 years old")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .padding(.top, 2)
                 }
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.04), radius: 15)
     }
@@ -351,7 +382,7 @@ struct BPAAnimalRegistrationView: View {
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.04), radius: 15)
     }
@@ -362,6 +393,7 @@ struct BPAAnimalRegistrationView: View {
             Button(action: {
                 let registrationData = AnimalRegistrationData(
                     ear_tag_number: earTagNumber,
+                    animal_name: animalName.isEmpty ? nil : animalName,
                     species: species,
                     sex: sex,
                     breed: breed,
@@ -370,7 +402,8 @@ struct BPAAnimalRegistrationView: View {
                     address: address.isEmpty ? nil : address,
                     village: village,
                     district: district,
-                    state: stateName
+                    state: stateName,
+                    last_image_path: nil
                 )
                 path.append(.bpaRegistrationReview(data: registrationData))
             }) {
@@ -399,11 +432,11 @@ struct BPAAnimalRegistrationView: View {
                     .foregroundColor(Color(red: 27/255, green: 94/255, blue: 32/255))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .cornerRadius(14)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color.gray.opacity(0.2))
+                            .stroke(Color(.separator), lineWidth: 1)
                     )
             }
         }

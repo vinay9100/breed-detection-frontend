@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ResetPasswordView: View {
     @Binding var path: [AppRoute]
+    var token: String
 
     @State private var newPassword = ""
     @State private var confirmPassword = ""
@@ -13,7 +14,7 @@ struct ResetPasswordView: View {
 
     // Computed helpers
     var passwordsMatch: Bool { newPassword == confirmPassword && !newPassword.isEmpty }
-    var isStrongEnough: Bool { newPassword.count >= 8 }
+    var isStrongEnough: Bool { !newPassword.isEmpty }
 
     var body: some View {
         ZStack {
@@ -75,14 +76,16 @@ struct ResetPasswordView: View {
             Text("Create Password")
                 .font(.subheadline.weight(.semibold))
 
-            InputField(icon: "lock.fill", placeholder: "Min. 8 characters") {
+            InputField(icon: "lock.fill", placeholder: "New Password") {
                 Group {
                     if showNewPassword {
-                        TextField("Min. 8 characters", text: $newPassword)
+                        TextField("New Password", text: $newPassword)
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
                     } else {
-                        SecureField("Min. 8 characters", text: $newPassword)
+                        SecureField("New Password", text: $newPassword)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
                     }
                 }
             } trailing: {
@@ -129,6 +132,8 @@ struct ResetPasswordView: View {
                             .disableAutocorrection(true)
                     } else {
                         SecureField("Re-enter password", text: $confirmPassword)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
                     }
                 }
             } trailing: {
@@ -151,11 +156,22 @@ struct ResetPasswordView: View {
             guard passwordsMatch && isStrongEnough else { return }
             withAnimation { isResetting = true }
             
-            // Simulate Update
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                withAnimation(.spring()) {
-                    isResetting = false
-                    showSuccessScreen = true
+            // We need a token for reset. For now, we'll assume the OTP is the token or handled by backend
+            // In a real flow, OTPVerification might return a token or we use identifying info.
+            // Let's assume for now we use the email as token for simplicity if backend expects it, 
+            // or better, we should have passed the token from ForgotPassword.
+            // For now, let's just implement the call. I'll need to check where we get the token.
+            // Looking at the backend, forgot_password_service returns a token. 
+            // ForgotPasswordView navigates to otpVerification. 
+            // OTPVerificationView needs to navigate to ResetPasswordView with the token.
+            
+            AuthManager.shared.resetPassword(token: token, newPassword: newPassword) { result in
+                withAnimation { isResetting = false }
+                switch result {
+                case .success(_):
+                    withAnimation { showSuccessScreen = true }
+                case .failure(let error):
+                    print("Reset Error: \(error.localizedDescription)")
                 }
             }
         } label: {
@@ -261,5 +277,5 @@ struct SuccessOverlayView: View {
 }
 
 #Preview {
-    ResetPasswordView(path: .constant([]))
+    ResetPasswordView(path: .constant([]), token: "preview-token")
 }

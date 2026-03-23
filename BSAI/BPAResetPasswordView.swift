@@ -2,47 +2,95 @@ import SwiftUI
 
 struct BPAResetPasswordView: View {
     @Binding var path: [AppRoute]
+    var token: String
     @State private var newPassword = ""
     @State private var confirmPassword = ""
     @State private var appeared = false
     @State private var showSuccess = false
+    @State private var showNewPassword = false
+    @State private var showConfirmPassword = false
     
     var body: some View {
         ZStack {
-            Color(hex: "F8FBF9").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
-            VStack(spacing: 0) {
-                navigationHeader
-                
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 32) {
-                        logoSection
-                        
-                        VStack(spacing: 8) {
-                            Text("Reset Password")
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(Color(hex: "1B5E20"))
-                            Text("Create a strong new password")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        VStack(spacing: 20) {
-                            passwordField(label: "New Password", placeholder: "Enter new password", text: $newPassword)
-                            passwordField(label: "Confirm Password", placeholder: "Confirm your password", text: $confirmPassword)
-                        }
-                        
-                        resetButton
-                        
-                        Spacer(minLength: 40)
-                    }
-                    .padding(.horizontal, 24)
-                }
+            if showSuccess {
+                successOverlay
+            } else {
+                mainContent
             }
-            
         }
         .onAppear {
             appeared = true
+        }
+    }
+    
+    private var successOverlay: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            ZStack {
+                Circle()
+                    .fill(Color(hex: "00C853").opacity(0.1))
+                    .frame(width: 120, height: 120)
+                
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(Color(hex: "00C853"))
+                    .scaleEffect(appeared ? 1 : 0.1)
+            }
+            
+            VStack(spacing: 12) {
+                Text("Success!")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.primary)
+                
+                Text("Your password has been updated\nsuccessfully. Redirecting to login...")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            
+            Spacer()
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.appBackground)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                path = []
+            }
+        }
+    }
+    
+    private var mainContent: some View {
+        VStack(spacing: 0) {
+            navigationHeader
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 32) {
+                    logoSection
+                    
+                    VStack(spacing: 8) {
+                        Text("Reset Password")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(.primary)
+                        Text("Create a strong new password")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    VStack(spacing: 20) {
+                        passwordField(label: "New Password", placeholder: "Enter new password", text: $newPassword, showPassword: $showNewPassword)
+                        passwordField(label: "Confirm Password", placeholder: "Confirm your password", text: $confirmPassword, showPassword: $showConfirmPassword)
+                    }
+                    
+                    resetButton
+                    
+                    Spacer(minLength: 40)
+                }
+                .padding(.horizontal, 24)
+            }
         }
     }
     
@@ -81,7 +129,7 @@ struct BPAResetPasswordView: View {
         .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.1), value: appeared)
     }
     
-    private func passwordField(label: String, placeholder: String, text: Binding<String>) -> some View {
+    private func passwordField(label: String, placeholder: String, text: Binding<String>, showPassword: Binding<Bool>) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(label)
                 .font(.system(size: 14, weight: .semibold))
@@ -92,14 +140,27 @@ struct BPAResetPasswordView: View {
                     .foregroundColor(.secondary)
                     .frame(width: 20)
                 
-                SecureField(placeholder, text: text)
-                    .font(.system(size: 16))
+                if showPassword.wrappedValue {
+                    TextField(placeholder, text: text)
+                        .font(.system(size: 16))
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                } else {
+                    SecureField(placeholder, text: text)
+                        .font(.system(size: 16))
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                }
                 
-                Image(systemName: "eye.slash")
-                    .foregroundColor(.secondary)
+                Button {
+                    showPassword.wrappedValue.toggle()
+                } label: {
+                    Image(systemName: showPassword.wrappedValue ? "eye.slash.fill" : "eye.fill")
+                        .foregroundColor(.secondary)
+                }
             }
             .padding()
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -110,8 +171,17 @@ struct BPAResetPasswordView: View {
     
     private var resetButton: some View {
         Button(action: {
-            // After reset, return to the start — unified login screen
-            path.removeAll()
+            guard newPassword == confirmPassword && !newPassword.isEmpty else { return }
+            AuthManager.shared.resetPassword(token: token, newPassword: newPassword) { result in
+                switch result {
+                case .success(_):
+                    withAnimation {
+                        showSuccess = true
+                    }
+                case .failure(let error):
+                    print("Error: \(error)")
+                }
+            }
         }) {
             Text("Update Password")
                 .font(.headline)
@@ -128,5 +198,5 @@ struct BPAResetPasswordView: View {
 }
 
 #Preview {
-    BPAResetPasswordView(path: .constant([]))
+    BPAResetPasswordView(path: .constant([]), token: "preview-token")
 }

@@ -5,6 +5,7 @@ struct AnalyticsHubView: View {
     @State private var appeared = false
     @State private var analytics: AnalyticsSummaryResponse? = nil
     @State private var isLoading = false
+    @ObservedObject private var localization = LocalizationManager.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -21,7 +22,7 @@ struct AnalyticsHubView: View {
                 .padding(.top, 10)
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
             loadAnalytics()
             withAnimation {
@@ -58,7 +59,7 @@ struct AnalyticsHubView: View {
                 }
             }
             
-            Text("Analytics Hub")
+            Text(localization.t("analytics_hub_title"))
                 .font(.system(size: 20, weight: .bold))
                 .padding(.leading, path.last == .analyticsHub ? 10 : 0)
             
@@ -66,7 +67,7 @@ struct AnalyticsHubView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 15)
-        .background(Color(.systemBackground))
+        .background(Color.secondaryAppBackground)
     }
     
     private var performanceOverviewCard: some View {
@@ -81,24 +82,24 @@ struct AnalyticsHubView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Performance Overview")
+                    Text(localization.t("analytics_performance_overview"))
                         .font(.headline)
-                    Text("Last 30 days")
+                    Text(localization.t("analytics_last_30_days"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
             
             HStack(spacing: 12) {
-                MiniStatCard(label: "Total Animals", value: "\(analytics?.total_animals ?? 0)", trend: "", color: .green)
-                MiniStatCard(label: "Avg Accuracy", value: "\(Int(analytics?.average_accuracy ?? 0))%", trend: "", color: Color(hex: "00C853"))
-                MiniStatCard(label: "Herd Size", value: "\(analytics?.total_animals ?? 0)", trend: "", color: Color(hex: "00C853"))
+                MiniStatCard(label: localization.t("analytics_total_animals"), value: "\(analytics?.total_animals ?? 0)", trend: "", color: .green)
+                MiniStatCard(label: localization.t("analytics_avg_accuracy"), value: "\(Int(analytics?.average_accuracy ?? 0))%", trend: "", color: Color(hex: "00C853"))
+                MiniStatCard(label: localization.t("analytics_herd_size"), value: "\(analytics?.total_animals ?? 0)", trend: "", color: Color(hex: "00C853"))
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(28)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .scaleEffect(appeared ? 1 : 0.95)
         .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.1), value: appeared)
@@ -106,32 +107,32 @@ struct AnalyticsHubView: View {
     
     private var analyticsCategoriesSection: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Analytics Categories")
+            Text(localization.t("analytics_categories"))
                 .font(.headline)
                 .padding(.horizontal, 4)
             
             VStack(spacing: 12) {
-                AnalyticsCategoryRow(icon: "chart.line.uptrend.xyaxis", iconColor: Color(hex: "2979FF"), title: "Performance Trends", subtitle: "Track yield and productivity over time") {
+                AnalyticsCategoryRow(icon: "chart.line.uptrend.xyaxis", iconColor: Color(hex: "2979FF"), title: localization.t("analytics_perf_trends"), subtitle: localization.t("analytics_perf_trends_desc")) {
                     path.append(.performanceTrends)
                 }
                 
-                AnalyticsCategoryRow(icon: "waveform.path", iconColor: Color(hex: "AA00FF"), title: "Productivity Analytics", subtitle: "Detailed herd productivity metrics") {
+                AnalyticsCategoryRow(icon: "waveform.path", iconColor: Color(hex: "AA00FF"), title: localization.t("analytics_productivity"), subtitle: localization.t("analytics_productivity_desc")) {
                     path.append(.productivityAnalytics)
                 }
                 
-                AnalyticsCategoryRow(icon: "person.2.fill", iconColor: Color(hex: "00C853"), title: "Herd Summary", subtitle: "Complete overview of your livestock") {
+                AnalyticsCategoryRow(icon: "person.2.fill", iconColor: Color(hex: "00C853"), title: localization.t("analytics_herd_summary"), subtitle: localization.t("analytics_herd_summary_desc")) {
                     path.append(.herdSummary)
                 }
                 
-                AnalyticsCategoryRow(icon: "chart.pie.fill", iconColor: Color(hex: "FF6D00"), title: "Breed Distribution", subtitle: "Analyze breed composition") {
+                AnalyticsCategoryRow(icon: "chart.pie.fill", iconColor: Color(hex: "FF6D00"), title: localization.t("analytics_breed_dist"), subtitle: localization.t("analytics_breed_dist_desc")) {
                     path.append(.breedDistribution)
                 }
                 
-                AnalyticsCategoryRow(icon: "calendar.badge.clock", iconColor: Color(hex: "536DFE"), title: "Scan History", subtitle: "Review all past scans") {
+                AnalyticsCategoryRow(icon: "calendar.badge.clock", iconColor: Color(hex: "536DFE"), title: localization.t("analytics_scan_history"), subtitle: localization.t("analytics_scan_history_desc")) {
                     path.append(.scanHistory)
                 }
                 
-                AnalyticsCategoryRow(icon: "chart.bar.xaxis", iconColor: Color(hex: "FF4081"), title: "Yield Forecast", subtitle: "AI-powered production predictions") {
+                AnalyticsCategoryRow(icon: "chart.bar.xaxis", iconColor: Color(hex: "FF4081"), title: localization.t("analytics_yield_forecast"), subtitle: localization.t("analytics_yield_forecast_desc")) {
                     path.append(.yieldPrediction)
                 }
             }
@@ -145,18 +146,18 @@ struct AnalyticsHubView: View {
     private var syncNote: some View {
         HStack(spacing: 12) {
             Text("💡")
-            Text("Analytics data syncs automatically across all your devices")
+            Text(localization.t("analytics_sync_note"))
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(Color(hex: "2E7D32"))
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: "E8F5E9"))
+        .background(Color.green.opacity(0.1))
         .cornerRadius(15)
         .overlay(
             RoundedRectangle(cornerRadius: 15)
-                .stroke(Color(hex: "C8E6C9"), lineWidth: 1)
+                .stroke(Color.green.opacity(0.2), lineWidth: 1)
         )
         .padding(.horizontal, 24)
         .padding(.bottom, 30)
@@ -183,11 +184,11 @@ struct MiniStatCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(15)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(18)
         .overlay(
             RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+                .stroke(Color.shadowColor, lineWidth: 1)
         )
     }
 }
@@ -228,9 +229,9 @@ struct AnalyticsCategoryRow: View {
                     .foregroundColor(.gray.opacity(0.3))
             }
             .padding(16)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(22)
-            .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 4)
+            .shadow(color: Color.shadowColor, radius: 8, x: 0, y: 4)
         }
         .buttonStyle(ScaleButtonStyle())
     }

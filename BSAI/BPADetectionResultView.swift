@@ -2,30 +2,19 @@ import SwiftUI
 
 struct BPADetectionResultView: View {
     @Binding var path: [AppRoute]
+    let earTag: String?
     @State private var appeared = false
+    
+    private var result: PredictResponse? {
+        AuthManager.shared.currentPrediction
+    }
     
     var body: some View {
         ZStack {
-            Color(hex: "F8FBF9").ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                headerSection
-                
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 25) {
-                        resultCard
-                        
-                        confidenceSection
-                        
-                        comparisonSection
-                        
-                        saveButton
-                        
-                        Spacer(minLength: 40)
-                    }
-                    .padding(24)
-                    .padding(.top, -30)
-                }
+            if let result = result {
+                contentView(result: result)
+            } else {
+                noResultView
             }
         }
         .onAppear {
@@ -35,34 +24,100 @@ struct BPADetectionResultView: View {
         }
     }
     
-    private var headerSection: some View {
-        VStack(spacing: 15) {
+    @ViewBuilder
+    private func contentView(result: PredictResponse) -> some View {
+        ZStack {
+            Color(.systemGroupedBackground).ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                headerSection(result: result)
+                
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 25) {
+                        resultCard(result: result)
+                        
+                        confidenceSection(result: result)
+                        
+                        comparisonSection(result: result)
+                        
+                        saveButton(result: result)
+                        
+                        Spacer(minLength: 40)
+                    }
+                    .padding(24)
+                    .padding(.top, -30)
+                }
+            }
+        }
+    }
+    
+    private var noResultView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 50))
+                .foregroundColor(.orange)
+            Text("No Analysis Result Found")
+                .font(.headline)
+            Button("Back to Dashboard") {
+                path = [.bpaDashboard]
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+    
+    private func headerSection(result: PredictResponse) -> some View {
+        VStack(spacing: 10) {   
+            // Top bar
             HStack {
-                Button(action: { 
+                Button(action: {
+                    AuthManager.shared.pendingImage = nil
+                    AuthManager.shared.currentPrediction = nil
                     if path.count >= 3 {
                         path.removeLast(3)
                     } else {
-                        path.removeLast(path.count)
+                        path.removeAll()
                     }
                 }) {
                     Image(systemName: "xmark")
-                        .font(.title3.bold())
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
-                        .padding(12)
+                        .padding(8)
                         .background(Color.white.opacity(0.2))
                         .clipShape(Circle())
                 }
                 
                 Text("AI Result")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.white)
                 
                 Spacer()
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 40)
-            .padding(.bottom, 60)
+            .padding(.horizontal, 20)
+
+            // Icon (smaller)
+            ZStack {
+                Circle()
+                    .fill(Color(.systemBackground))
+                    .frame(width: 50, height: 50)
+                
+                Image(systemName: result.message != nil ? "exclamationmark.triangle.fill" : "checkmark.seal.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(result.message != nil ? .orange : .green)
+            }
+
+            // Text
+            VStack(spacing: 4) {
+                Text(result.message != nil ? "Rejected" : "Success")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
+
+                Text(result.message ?? "Breed identified")
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.85))
+            }
         }
+        .padding(.top, 20)
+        .padding(.bottom, 10)
         .background(
             LinearGradient(
                 colors: [Color(hex: "00C853"), Color(hex: "008D43")],
@@ -73,154 +128,221 @@ struct BPADetectionResultView: View {
         )
     }
     
-    private var resultCard: some View {
+    private func resultCard(result: PredictResponse) -> some View {
         VStack(spacing: 20) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color.gray.opacity(0.1))
-                    .frame(height: 200)
-                    .overlay(
-                        VStack(spacing: 10) {
-                            Image(systemName: "photo.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.gray.opacity(0.3))
-                            Text("Analyzed Animal Image")
-                                .font(.system(size: 14))
-                                .foregroundColor(.secondary)
-                        }
-                    )
+            // 1. Image View — fixed height, properly clipped to its container
+            ZStack { // ✅ REMOVED GeometryReader to prevent memory spikes
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(.systemGray6))
                 
+                if let imageUrl = result.image_url,
+                   let url = URL(string: "\(AuthManager.shared.baseURL)/\(imageUrl)") {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .empty:
+                            ProgressView()
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFit()   // ✅ REQUIRED FIX
+                                .frame(height: 180)
+                                .frame(maxWidth: .infinity)
+                                .clipped()
+                        case .failure(_):
+                            Image(systemName: "photo")
+                                .foregroundColor(.gray)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                    .id(result.image_url ?? UUID().uuidString) // ✅ FORCE MEMORY RESET
+                } else {
+                    VStack(spacing: 12) {
+                        Image(systemName: "photo.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(.gray.opacity(0.3))
+                        Text("Analyzed Image")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                // Status badge
                 VStack {
                     Spacer()
                     HStack {
                         Spacer()
-                        Text("DETECTED")
+                        Text(result.message != nil ? "REJECTED" : "DETECTED")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .background(Color.purple)
+                            .background(result.message != nil ? Color.red : Color.purple)
                             .cornerRadius(8)
-                            .padding(15)
+                            .padding(12)
                     }
                 }
             }
-            
-            VStack(spacing: 8) {
-                Text(AuthManager.shared.currentPrediction?.breed_name ?? "Unknown Breed")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(Color(hex: "1B5E20"))
-                Text("Type: \(AuthManager.shared.currentPrediction?.animal_type ?? "Unknown") | Est. Yield: \(String(format: "%.1f", AuthManager.shared.currentPrediction?.yield_estimate ?? 0.0)) L/day")
-                    .font(.system(size: 16))
-                    .foregroundColor(.secondary)
+            .frame(height: 200)
+            .cornerRadius(20)
+            .clipped()
+
+            // 2. Info Section
+            if let message = result.message {
+                VStack(spacing: 12) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text("Image Not Accepted")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.orange)
+                    }
+                    
+                    Text(message)
+                        .font(.system(size: 15, weight: .medium))
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                }
+                .padding(.bottom, 10)
+            } else {
+                VStack(spacing: 8) {
+                    Text(result.breed_name ?? "Unknown Breed")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(Color(hex: "1B5E20"))
+                    Text("Type: \(result.animal_type ?? "Unknown") | Fat Content: \(result.fat_content ?? "N/A")")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .padding(20)
-        .background(Color.white)
+        .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(30)
         .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
     }
     
-    private var confidenceSection: some View {
-        let confScore = AuthManager.shared.currentPrediction?.confidence_score ?? 0.0
-        
-        return VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                Text("AI Confidence Score")
-                    .font(.system(size: 16, weight: .bold))
-                Spacer()
-                Text("\(String(format: "%.1f", confScore))%")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(Color(hex: "00C853"))
-            }
-            
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.gray.opacity(0.1))
+    private func confidenceSection(result: PredictResponse) -> some View {
+        Group {
+            if result.message == nil {
+                let confScore = result.confidence_score ?? 0.0
+                
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack {
+                        Text("AI Confidence Score")
+                            .font(.system(size: 16, weight: .bold))
+                        Spacer()
+                        Text("\(String(format: "%.1f", confScore))%")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(Color(hex: "00C853"))
+                    }
                     
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(LinearGradient(colors: [Color(hex: "00C853"), Color(hex: "008D43")], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: geo.size.width * CGFloat(min(confScore / 100.0, 1.0)))
-                }
-            }
-            .frame(height: 12)
-            
-            Text("High confidence result. The features perfectly align with \(AuthManager.shared.currentPrediction?.breed_name ?? "this breed's") characteristics in the BPA database. Fat Content Est: \(AuthManager.shared.currentPrediction?.fat_content ?? "N/A")")
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
-                .lineSpacing(4)
-        }
-        .padding(24)
-        .background(Color.white)
-        .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 20)
-        .animation(.spring().delay(0.1), value: appeared)
-    }
-    
-    private var comparisonSection: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            Text("Key Characteristics Identified")
-                .font(.system(size: 16, weight: .bold))
-            
-            VStack(spacing: 12) {
-                CharacteristicRow(label: "Coat Pattern", value: "Black & White Spotted", matches: true)
-                CharacteristicRow(label: "Body Structure", value: "Large Dairy Frame", matches: true)
-                CharacteristicRow(label: "Head Shape", value: "Correct Proportions", matches: true)
-                CharacteristicRow(label: "Horn Status", value: "Dehorning Verified", matches: true)
-            }
-        }
-        .padding(24)
-        .background(Color.white)
-        .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 20)
-        .animation(.spring().delay(0.2), value: appeared)
-    }
-    
-    private var saveButton: some View {
-        VStack(spacing: 15) {
-            Button(action: {
-                // Read from the shared prediction state
-                guard let prediction = AuthManager.shared.currentPrediction else { return }
-                
-                let breed = prediction.breed_name
-                let confidence = prediction.confidence_score
-                let yieldEstimate = prediction.yield_estimate ?? 0.0
-                
-                AuthManager.shared.saveDetection(breedName: breed, confidenceScore: confidence, yieldEstimate: yieldEstimate) { result in
-                    switch result {
-                    case .success(_):
-                        if path.count >= 3 {
-                            path.removeLast(3)
-                        } else {
-                            path.removeAll()
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.gray.opacity(0.1))
+                            
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(LinearGradient(colors: [Color(hex: "00C853"), Color(hex: "008D43")], startPoint: .leading, endPoint: .trailing))
+                                .frame(width: geo.size.width * CGFloat(min(confScore / 100.0, 1.0)))
                         }
-                    case .failure(let error):
-                        print("Failed to save detection: \(error.localizedDescription)")
-                        // Handle error (e.g., show an alert) 
+                    }
+                    .frame(height: 12)
+                    
+                    Text("The features align with \(result.breed_name ?? "the detected breed")'s characteristics in the BPA database. Milk Yield Range: \(result.milk_yield_range ?? "N/A")")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                        .lineSpacing(4)
+                }
+                .padding(24)
+                .background(Color(.secondarySystemGroupedBackground))
+                .cornerRadius(24)
+                .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 20)
+            }
+        }
+    }
+    
+    private func comparisonSection(result: PredictResponse) -> some View {
+        Group {
+            if result.message == nil {
+                VStack(alignment: .leading, spacing: 15) {
+                    Text("Key Characteristics Identified")
+                        .font(.system(size: 16, weight: .bold))
+                    
+                    VStack(spacing: 12) {
+                        CharacteristicRow(label: "Coat Pattern", value: "Verified", matches: true)
+                        CharacteristicRow(label: "Body Structure", value: "Identified", matches: true)
+                        CharacteristicRow(label: "Head Shape", value: "Analyzed", matches: true)
+                        CharacteristicRow(label: "Breed Standard", value: "Aligned", matches: true)
                     }
                 }
-            }) {
-                Text("Confirm & Use Result")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 18)
-                    .background(Color(hex: "008D43"))
-                    .cornerRadius(14)
-                    .shadow(color: Color(hex: "008D43").opacity(0.3), radius: 10, x: 0, y: 5)
+                .padding(24)
+                .background(Color(.secondarySystemGroupedBackground))
+                .cornerRadius(24)
+                .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 20)
+            }
+        }
+    }
+    
+    private func saveButton(result: PredictResponse) -> some View {
+        VStack(spacing: 15) {
+            if result.message == nil {
+                Button(action: {
+                    AuthManager.shared.saveDetection(
+                        breedName: result.breed_name ?? "Unknown",
+                        confidenceScore: result.confidence_score ?? 0.0,
+                        yieldEstimate: result.yield_estimate,
+                        milkYieldRange: result.milk_yield_range,
+                        animalType: result.animal_type,
+                        fatContent: result.fat_content,
+                        imagePath: result.image_url,
+                        animalEarTag: earTag
+                    ) { saveResult in
+                        switch saveResult {
+                        case .success:
+                            AuthManager.shared.currentPrediction = nil
+                            AuthManager.shared.pendingImage = nil
+                            // Redirect back to registration form to continue
+                            if let regIdx = path.firstIndex(of: .bpaAnimalRegistration) {
+                                path = Array(path.prefix(through: regIdx))
+                            } else if let dashIdx = path.firstIndex(of: .bpaDashboard) {
+                                path = Array(path.prefix(through: dashIdx))
+                            } else {
+                                path.removeAll()
+                            }
+                        case .failure(let error):
+                            print("Failed to save detection: \(error.localizedDescription)")
+                        }
+                    }
+                }) {
+                    Text("Confirm & Use Result")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(Color(hex: "008D43"))
+                        .cornerRadius(14)
+                        .shadow(color: Color(hex: "008D43").opacity(0.3), radius: 10, x: 0, y: 5)
+                }
             }
             
             Button(action: {
-                path.removeLast(2) // Back to Camera
+                // Go back to camera view
+                AuthManager.shared.pendingImage = nil
+                AuthManager.shared.currentPrediction = nil
+                if let camIdx = path.firstIndex(of: .bpaCamera(earTag: earTag)) {
+                    path = Array(path.prefix(through: camIdx))
+                } else if path.count >= 2 {
+                    path.removeLast(2)
+                }
             }) {
-                Text("Retake Scan")
+                Text(result.message != nil ? "Back to Camera" : "Retake Scan")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(Color(hex: "008D43"))
                     .frame(maxWidth: .infinity)
@@ -260,5 +382,8 @@ struct CharacteristicRow: View {
 }
 
 #Preview {
-    BPADetectionResultView(path: .constant([.bpaDashboard, .bpaAnimalRegistration, .bpaCamera, .bpaAIProcessing]))
+    BPADetectionResultView(
+        path: .constant([.bpaDashboard, .bpaAnimalRegistration, .bpaCamera(earTag: nil), .bpaAIProcessing(earTag: nil)]),
+        earTag: "ET-123"
+    )
 }

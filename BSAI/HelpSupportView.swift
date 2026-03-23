@@ -90,7 +90,14 @@ struct HelpSupportView: View {
                 .foregroundColor(.primary.opacity(0.8))
             
             VStack(spacing: 12) {
-                ContactRow(icon: "envelope.fill", iconColor: .purple, title: "Email Support", subtitle: "support@breedsure.ai", detail: "Response in 24h")
+                Button(action: {
+                    if let url = URL(string: "mailto:breedsureai@gmail.com") {
+                        UIApplication.shared.open(url)
+                    }
+                }) {
+                    ContactRow(icon: "envelope.fill", iconColor: .purple, title: "Email Support", subtitle: "breedsureai@gmail.com", detail: "Response in 24h")
+                }
+                .buttonStyle(PlainButtonStyle())
             }
         }
         .opacity(appeared ? 1 : 0)

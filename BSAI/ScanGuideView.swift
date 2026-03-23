@@ -18,7 +18,7 @@ struct ScanGuideView: View {
                 .padding(.horizontal)
             }
         }
-        .background(Color(uiColor: .systemBackground))
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
             appeared = true
         }
@@ -151,9 +151,9 @@ struct GuideStepCard: View {
             Spacer()
         }
         .padding()
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+        .shadow(color: Color.shadowColor, radius: 8, x: 0, y: 4)
         .opacity(appeared ? 1 : 0)
         .offset(x: appeared ? 0 : -20)
         .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(delay), value: appeared)

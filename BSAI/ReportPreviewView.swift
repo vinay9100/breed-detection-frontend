@@ -35,7 +35,7 @@ struct ReportPreviewView: View {
             }
             .opacity(appeared ? 1 : 0)
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
             loadData()
             withAnimation(.easeOut(duration: 0.5)) {
@@ -67,9 +67,9 @@ struct ReportPreviewView: View {
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             Text("Report Preview")
                 .font(.system(size: 20, weight: .bold))
@@ -116,9 +116,9 @@ struct ReportPreviewView: View {
             Spacer()
         }
         .padding(25)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .scaleEffect(appeared ? 1 : 0.95)
         .opacity(appeared ? 1 : 0)
         .animation(.spring(response: 0.6, dampingFraction: 0.75).delay(0.1), value: appeared)
@@ -147,9 +147,9 @@ struct ReportPreviewView: View {
             Divider().background(Color.gray.opacity(0.1))
             
             ReportSection(title: "Health & Care", items: [
-                ReportRow(label: "Herd Health Score:", value: String(format: "%.0f%%", (summary?.average_accuracy ?? 0) * 100), color: .green),
+                ReportRow(label: "Herd Health Score:", value: String(format: "%.0f%%", (summary?.average_accuracy ?? 0)), color: .green),
                 ReportRow(label: "Vaccinations Done:", value: "\(summary?.total_animals != 0 ? Int(Double(summary?.total_animals ?? 0) * 0.75) : 0)"),
-                ReportRow(label: "Disease Risk:", value: (summary?.average_accuracy ?? 0) > 0.8 ? "Low" : "Moderate", color: .orange)
+                ReportRow(label: "Disease Risk:", value: (summary?.average_accuracy ?? 0) > 80 ? "Low" : "Moderate", color: .orange)
             ])
             
             Divider().background(Color.gray.opacity(0.1))
@@ -161,9 +161,9 @@ struct ReportPreviewView: View {
             ])
         }
         .padding(30)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(32)
-        .shadow(color: Color.black.opacity(0.05), radius: 20, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 20, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 30)
         .animation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.2), value: appeared)

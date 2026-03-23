@@ -6,12 +6,25 @@ struct BreedDistributionView: View {
     @Binding var path: [AppRoute]
     @State private var appeared = false
     
-    let distributionData = [
-        BreedDistItem(name: "Holstein Friesian", yield: "18.5 L/day average", count: 8, percentage: 33, color: .blue),
-        BreedDistItem(name: "Jersey Cow", yield: "15.2 L/day average", count: 6, percentage: 25, color: .green),
-        BreedDistItem(name: "Murrah Buffalo", yield: "12.3 L/day average", count: 5, percentage: 21, color: .purple),
-        BreedDistItem(name: "Gir Cow", yield: "10.8 L/day average", count: 3, percentage: 13, color: .orange)
-    ]
+    @State private var summary: AnalyticsSummaryResponse? = nil
+    @State private var isLoading = false
+    
+    var breedItems: [BreedDistItem] {
+        guard let data = summary?.pie_chart else { return [] }
+        let total = summary?.total_animals ?? 1
+        let colors: [Color] = [.blue, .green, .purple, .orange, .pink, .teal]
+        
+        return data.enumerated().map { index, apiData in
+            let percentage = total > 0 ? (apiData.count * 100 / total) : 0
+            return BreedDistItem(
+                name: apiData.name,
+                yield: "Live statistics",
+                count: apiData.count,
+                percentage: percentage,
+                color: colors[index % colors.count]
+            )
+        }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -28,9 +41,22 @@ struct BreedDistributionView: View {
                 .padding(.horizontal, 24)
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
-            appeared = true
+            loadData()
+            withAnimation {
+                appeared = true
+            }
+        }
+    }
+    
+    private func loadData() {
+        isLoading = true
+        AuthManager.shared.fetchReportSummary { result in
+            isLoading = false
+            if case .success(let data) = result {
+                self.summary = data
+            }
         }
     }
     
@@ -45,7 +71,7 @@ struct BreedDistributionView: View {
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
                     .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
             }
@@ -81,11 +107,11 @@ struct BreedDistributionView: View {
             }
             
             VStack(spacing: 8) {
-                Text("24 Animals")
+                Text("\(summary?.total_animals ?? 0) Animals")
                     .font(.system(size: 34, weight: .black))
-                    .foregroundColor(Color(hex: "4A148C"))
+                    .foregroundColor(.primary)
                 
-                Text("Across 5 different breeds")
+                Text("Across \(summary?.pie_chart.count ?? 0) different breeds")
                     .font(.subheadline)
                     .foregroundColor(.purple)
             }
@@ -99,9 +125,9 @@ struct BreedDistributionView: View {
             )
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .padding(.top, 20)
         .opacity(appeared ? 1 : 0)
         .scaleEffect(appeared ? 1 : 0.95)
@@ -114,16 +140,21 @@ struct BreedDistributionView: View {
                 .font(.system(size: 18, weight: .bold))
             
             HStack(spacing: 2) {
-                RoundedCorners(color: .blue, corners: [.topLeft, .bottomLeft])
-                    .frame(width: 80)
-                Rectangle().fill(Color.green).frame(width: 60)
-                Rectangle().fill(Color.purple).frame(width: 50)
-                Rectangle().fill(Color.orange).frame(width: 30)
-                RoundedCorners(color: .pink, corners: [.topRight, .bottomRight])
-                    .frame(width: 25)
+                if breedItems.isEmpty {
+                    Rectangle().fill(Color.gray.opacity(0.1))
+                } else {
+                    ForEach(breedItems.indices, id: \.self) { i in
+                        let item = breedItems[i]
+                        Rectangle()
+                            .fill(item.color)
+                            .frame(maxWidth: .infinity)
+                            .frame(width: CGFloat(item.percentage) * 3) // approximation for visual
+                    }
+                }
             }
             .frame(height: 25)
             .cornerRadius(8)
+            .clipped()
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
@@ -132,7 +163,7 @@ struct BreedDistributionView: View {
     
     private var breedList: some View {
         VStack(spacing: 12) {
-            ForEach(Array(distributionData.enumerated()), id: \.offset) { index, item in
+            ForEach(Array(breedItems.enumerated()), id: \.offset) { index, item in
                 BreedDistRow(item: item)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 20)
@@ -192,9 +223,9 @@ struct BreedDistRow: View {
             .frame(height: 5)
         }
         .padding(20)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(22)
-        .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 4)
+        .shadow(color: Color.shadowColor, radius: 8, x: 0, y: 4)
     }
 }
 

@@ -3,12 +3,14 @@ import UIKit
 
 struct SettingsView: View {
     @Binding var path: [AppRoute]
+    @ObservedObject private var localization = LocalizationManager.shared
     @State private var appeared = false
     
     // App Preferences
     @AppStorage("app_language") private var appLanguage: String = "en"
     @State private var selectedLanguage: Language = .english
     @State private var showLanguagePicker = false
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
     @State private var notificationsEnabled = true
     @State private var biometricLock = false
     @State private var autoSync = true
@@ -57,7 +59,7 @@ struct SettingsView: View {
     
     var body: some View {
         ZStack {
-            Color(hex: "F9FBF9").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 premiumNavigationBar
@@ -69,42 +71,25 @@ struct SettingsView: View {
                         languageSelectionCard
                         
                         // Notifications & Security
-                        settingsSection(title: "System & Security") {
-                            SettingsToggleRow(icon: "bell.badge.fill", iconColor: .orange, title: "Push Notifications", isOn: $notificationsEnabled)
-                            SettingsToggleRow(icon: "faceid", iconColor: .green, title: "Biometric Lock", isOn: $biometricLock)
-                            SettingsToggleRow(icon: "hand.tap.fill", iconColor: .blue, title: "Haptic Feedback", isOn: $hapticFeedback)
+                        settingsSection(title: localization.t("settings_system")) {
+                            SettingsToggleRow(icon: "moon.stars.fill", iconColor: .indigo, title: localization.t("settings_dark_mode"), isOn: $isDarkMode)
+                            SettingsToggleRow(icon: "bell.badge.fill", iconColor: .orange, title: localization.t("settings_push_notifications"), isOn: $notificationsEnabled)
+                            SettingsToggleRow(icon: "faceid", iconColor: .green, title: localization.t("settings_biometric"), isOn: $biometricLock)
+                            SettingsToggleRow(icon: "hand.tap.fill", iconColor: .blue, title: localization.t("settings_haptic"), isOn: $hapticFeedback)
                         }
                         
                         // Data & Sync
-                        settingsSection(title: "Data Management") {
-                            SettingsToggleRow(icon: "arrow.triangle.2.circlepath", iconColor: .purple, title: "Auto-Sync Records", isOn: $autoSync)
-                            SettingsToggleRow(icon: "location.fill", iconColor: .red, title: "Location Services", isOn: $locationServices)
+                        settingsSection(title: localization.t("settings_data")) {
+                            SettingsToggleRow(icon: "arrow.triangle.2.circlepath", iconColor: .purple, title: localization.t("settings_auto_sync"), isOn: $autoSync)
+                            SettingsToggleRow(icon: "location.fill", iconColor: .red, title: localization.t("settings_location"), isOn: $locationServices)
                         }
                         
                         // About Section
-                        settingsSection(title: "About Application") {
-                            SettingsActionRow(icon: "info.circle.fill", iconColor: .blue, title: "App Version", value: "v2.1.0 (Stable)") {
-                                // Action
-                            }
-                            SettingsActionRow(icon: "doc.text.fill", iconColor: .gray, title: "Privacy Policy", value: "") {
+                        settingsSection(title: localization.t("settings_about")) {
+                            SettingsActionRow(icon: "info.circle.fill", iconColor: .blue, title: localization.t("settings_version"), value: "v2.1.0 (Stable)") {
                                 // Action
                             }
                         }
-                        
-                        // Delete Account (Danger Zone)
-                        Button(action: {}) {
-                            HStack {
-                                Image(systemName: "trash.fill")
-                                Text("Delete Account")
-                                    .fontWeight(.semibold)
-                            }
-                            .foregroundColor(.red)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.red.opacity(0.08))
-                            .cornerRadius(20)
-                        }
-                        .padding(.top, 10)
                         
                         Spacer(minLength: 60)
                     }
@@ -163,16 +148,16 @@ struct SettingsView: View {
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 5)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             
             Spacer()
             
-            Text("Settings")
+            Text(localization.t("settings_title"))
                 .font(.system(size: 20, weight: .bold))
-                .foregroundColor(Color(hex: "1B5E20"))
+                .foregroundColor(.primary)
             
             Spacer()
             
@@ -183,7 +168,7 @@ struct SettingsView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 15)
-        .background(Color.white)
+        .background(Color.cardBackground)
     }
     
     private var languageSelectionCard: some View {
@@ -204,10 +189,10 @@ struct SettingsView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("App Language")
+                        Text(localization.t("settings_app_language"))
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.primary)
-                        Text("Selected: \(selectedLanguage.title) (\(selectedLanguage.nativeName))")
+                        Text("\(localization.t("settings_selected")): \(selectedLanguage.title) (\(selectedLanguage.nativeName))")
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                     }
@@ -220,9 +205,9 @@ struct SettingsView: View {
                 }
             }
             .padding(20)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(25)
-            .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 8)
+            .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 8)
         }
         .buttonStyle(ScaleButtonStyle())
         .opacity(appeared ? 1 : 0)
@@ -240,9 +225,9 @@ struct SettingsView: View {
             VStack(spacing: 0) {
                 content()
             }
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(25)
-            .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 8)
+            .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 8)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
@@ -256,7 +241,7 @@ struct SettingsView: View {
                 .frame(width: 40, height: 5)
                 .padding(.vertical, 12)
             
-            Text("Select Language")
+            Text(localization.t("settings_select_language"))
                 .font(.system(size: 18, weight: .bold))
                 .padding(.bottom, 20)
             
@@ -303,7 +288,7 @@ struct SettingsView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 40)
         }
-        .background(Color.white)
+        .background(Color.cardBackground)
         .clipShape(RoundedCorner(radius: 35, corners: [.topLeft, .topRight]))
         .frame(maxHeight: .infinity, alignment: .bottom)
         .ignoresSafeArea()

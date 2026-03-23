@@ -45,9 +45,9 @@ struct StatsCard: View {
             }
             .padding(18)
             .frame(width: 135, height: 170, alignment: .topLeading)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(25)
-            .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
+            .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
         }
         .buttonStyle(ScaleButtonStyle())
         .onAppear {

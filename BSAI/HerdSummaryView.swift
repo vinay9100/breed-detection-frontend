@@ -22,7 +22,7 @@ struct HerdSummaryView: View {
                 .padding(.horizontal, 24)
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
             loadData()
             withAnimation(.easeOut(duration: 0.5)) {
@@ -52,9 +52,9 @@ struct HerdSummaryView: View {
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             
             Text("Herd Summary")
@@ -116,9 +116,9 @@ struct HerdSummaryView: View {
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .padding(.top, 20)
         .opacity(appeared ? 1 : 0)
         .scaleEffect(appeared ? 1 : 0.95)
@@ -156,9 +156,9 @@ struct HerdSummaryView: View {
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: appeared)
@@ -175,7 +175,11 @@ struct HerdSummaryView: View {
                 }
                 .foregroundColor(.blue)
                 
-                Text("15.3 L")
+                let avgYield = summary?.bar_chart.compactMap({ $0.avg_yield }).reduce(0, +) ?? 0
+                let count = Double(summary?.bar_chart.filter({ $0.avg_yield != nil }).count ?? 1)
+                let realAvg = count > 0 ? avgYield / count : 0
+                
+                Text("\(String(format: "%.1f", realAvg)) L")
                     .font(.system(size: 20, weight: .bold))
                 
                 Text("Per animal/day")
@@ -184,31 +188,31 @@ struct HerdSummaryView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(20)
-            .shadow(color: Color.black.opacity(0.02), radius: 10, x: 0, y: 5)
+            .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
             
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 6) {
                     Image(systemName: "heart.fill")
                         .font(.caption)
-                    Text("Health")
+                    Text("Confidence")
                         .font(.system(size: 12))
                 }
                 .foregroundColor(.green)
                 
-                Text("95%")
+                Text("\(Int(summary?.average_accuracy ?? 0))%")
                     .font(.system(size: 20, weight: .bold))
                 
-                Text("Herd health score")
+                Text("Scan accuracy score")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(20)
-            .shadow(color: Color.black.opacity(0.02), radius: 10, x: 0, y: 5)
+            .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
@@ -235,14 +239,20 @@ struct HerdSummaryView: View {
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
                 Spacer()
-                Text("275 L")
+                
+                let avgYield = summary?.bar_chart.compactMap({ $0.avg_yield }).reduce(0, +) ?? 0
+                let count = Double(summary?.bar_chart.filter({ $0.avg_yield != nil }).count ?? 1)
+                let realAvg = count > 0 ? avgYield / count : 0
+                let totalDaily = realAvg * Double(summary?.total_animals ?? 0)
+                
+                Text("\(String(format: "%.1f", totalDaily)) L")
                     .font(.system(size: 16, weight: .bold))
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(25)
-        .shadow(color: Color.black.opacity(0.02), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.7), value: appeared)

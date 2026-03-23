@@ -3,6 +3,7 @@ import SwiftUI
 struct OTPVerificationView: View {
     @Binding var path: [AppRoute]
     let identifier: String
+    var isPasswordReset: Bool = false
 
     @State private var otp: [String] = Array(repeating: "", count: 6)
     @FocusState private var focusedField: Int?
@@ -89,8 +90,8 @@ struct OTPVerificationView: View {
                             .frame(height: 60)
                             .background(
                                 RoundedRectangle(cornerRadius: 14)
-                                    .fill(Color.white)
-                                    .shadow(color: .black.opacity(0.05), radius: 5, y: 3)
+                                    .fill(Color.cardBackground)
+                                    .shadow(color: Color.shadowColor, radius: 5, y: 3)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14)
@@ -151,6 +152,26 @@ struct OTPVerificationView: View {
                 .offset(y: appeared ? 0 : 20)
                 .animation(.spring().delay(0.4), value: appeared)
 
+                // Resend Section
+                HStack(spacing: 4) {
+                    Text("Didn't receive code?")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    Button {
+                        resendOTP()
+                    } label: {
+                        Text(canResend ? "Resend OTP" : "Resend in \(timeRemaining)s")
+                            .font(.subheadline.bold())
+                            .foregroundColor(canResend ? .green : .secondary)
+                    }
+                    .disabled(!canResend)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+                .opacity(appeared ? 1 : 0)
+                .animation(.spring().delay(0.5), value: appeared)
+
                 Spacer()
             }
             .padding(.horizontal, 28)
@@ -176,20 +197,24 @@ struct OTPVerificationView: View {
         }
 
         let otpString = otp.joined()
-        AuthManager.shared.verifyOTP(email: identifier, otp: otpString) { result in
+        
+
+        let realEmail = identifier
+
+        AuthManager.shared.verifyOTP(email: realEmail, otp: otpString) { result in
             withAnimation(.spring()) {
                 isValidating = false
             }
             
             switch result {
-            case .success(_):
+            case .success(let token):
                 withAnimation { isSuccess = true }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                    path.removeAll(where: { 
-                        if case .otpVerification = $0 { return true }
-                        if case .register = $0 { return true }
-                        return false 
-                    }) // Go back to login after verification
+                    if isPasswordReset {
+                        path.append(.resetPassword(token: token))
+                    } else {
+                        path = [] // Redirect to Login screen after verification
+                    }
                 }
             case .failure(let error):
                 print("OTP Error: \(error.localizedDescription)")
@@ -202,4 +227,20 @@ struct OTPVerificationView: View {
             }
         }
     }
-}
+
+    private func resendOTP() {
+        guard canResend else { return }
+
+        // Remove BPA- prefix if present
+        let realEmail = identifier
+
+        AuthManager.shared.sendOTP(email: realEmail) { result in
+            switch result {
+            case .success(_):
+                timeRemaining = 60
+                canResend = false
+            case .failure(let error):
+                print("Resend Error: \(error.localizedDescription)")
+            }
+        }
+    }}

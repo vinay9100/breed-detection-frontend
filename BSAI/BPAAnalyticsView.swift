@@ -35,7 +35,7 @@ struct BPAAnalyticsView: View {
     
     var body: some View {
         ZStack {
-            Color(hex: "F8FBF9").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 analyticsHeader
@@ -114,11 +114,11 @@ struct BPAAnalyticsView: View {
             NavigationView {
                 VStack {
                     if activeDateSelection == "start" {
-                        DatePicker("Select Start Date", selection: $customStartDate, displayedComponents: .date)
+                        DatePicker("Select Start Date", selection: $customStartDate, in: ...Date(), displayedComponents: .date)
                             .datePickerStyle(GraphicalDatePickerStyle())
                             .padding()
                     } else {
-                        DatePicker("Select End Date", selection: $customEndDate, displayedComponents: .date)
+                        DatePicker("Select End Date", selection: $customEndDate, in: ...Date(), displayedComponents: .date)
                             .datePickerStyle(GraphicalDatePickerStyle())
                             .padding()
                     }
@@ -159,41 +159,70 @@ struct BPAAnalyticsView: View {
     // MARK: - Subviews
     
     private var analyticsHeader: some View {
-        VStack(spacing: 15) {
-            HStack(spacing: 20) {
-                Button(action: { 
-                    if !path.isEmpty {
-                        _ = path.removeLast()
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top) {
+                    Button(action: {
+                        if !path.isEmpty {
+                            _ = path.removeLast()
+                        }
+                    }) {
+                        Image(systemName: "arrow.left")
+                            .font(.title3.bold())
+                            .foregroundColor(.white)
+                            .padding(10)
+                            .background(Color.white.opacity(0.2))
+                            .clipShape(Circle())
                     }
-                }) {
-                    Image(systemName: "arrow.left")
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        let officerName = AuthManager.shared.currentUser?.fullName.split(separator: " ").first.map(String.init) ?? "Officer"
+                        let greeting = GreetingHelper.getGreeting(for: officerName)
+                        
+                        Text("\(greeting)👋")
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        
+                        Text("Officer")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
+                        
+                        Text("BPA Analytics")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                    
+                    Spacer()
                 }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("BPA Analytics")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                    Text("Comprehensive data insights")
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.8))
-                }
-                
-                Spacer()
+                .padding(.horizontal, 24)
+                .padding(.top, 5)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 5) // Reduced padding to match dashboard
             .padding(.bottom, 25)
-        }
-        .background(
-            LinearGradient(
-                colors: [Color(hex: "00C853"), Color(hex: "008D43")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+            .background(
+                ZStack {
+                    LinearGradient(
+                        colors: [Color(hex: "00C853"), Color(hex: "008D43")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    
+                    Circle()
+                        .fill(Color.white.opacity(0.06))
+                        .frame(width: 150, height: 150)
+                        .offset(x: -80, y: -20)
+                    
+                    Circle()
+                        .fill(Color.white.opacity(0.04))
+                        .frame(width: 100, height: 100)
+                        .offset(x: 120, y: 20)
+                }
+                .clipShape(RoundedCorner(radius: 30, corners: [.bottomLeft, .bottomRight]))
+                .shadow(color: Color(hex: "00C853").opacity(0.2), radius: 20, x: 0, y: 15)
+                .ignoresSafeArea(edges: .top)
             )
-            .ignoresSafeArea(edges: .top)
-        )
+        }
     }
     
     private var dailyRegistrationsCard: some View {
@@ -275,7 +304,7 @@ struct BPAAnalyticsView: View {
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
@@ -376,7 +405,7 @@ struct BPAAnalyticsView: View {
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
@@ -405,7 +434,7 @@ struct BPAAnalyticsView: View {
         }
         .padding(24)
         .frame(maxWidth: .infinity)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)

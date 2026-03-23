@@ -10,6 +10,8 @@ struct CameraView: View {
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var isUploading = false
     @State private var uploadError: String? = nil
+    @State private var showRejectionAlert = false
+    @State private var rejectionMessage: String = ""
     
     let modes = ["Front View", "Side Profile", "Full Body"]
     
@@ -155,9 +157,17 @@ struct CameraView: View {
             Task {
                 if let data = try? await newItem?.loadTransferable(type: Data.self),
                    let image = UIImage(data: data) {
-                    uploadImage(image)
+                    // Resize immediately to prevent memory crashes
+                    let resized = image.size.width > 1024 || image.size.height > 1024 ? 
+                        image.resized(to: CGSize(width: 1024, height: 1024)) ?? image : image
+                    uploadImage(resized)
                 }
             }
+        }
+        .alert("Image Rejected", isPresented: $showRejectionAlert) {
+            Button("Try Again", role: .cancel) { }
+        } message: {
+            Text(rejectionMessage)
         }
         .overlay {
             if isUploading {
@@ -178,7 +188,8 @@ struct CameraView: View {
     
     private func simulateCapture() {
         // In a real app, this would use the camera sensor.
-        // For simulation, we append the processing view.
+        // For simulation, we'll use a placeholder but prepare the pending state.
+        AuthManager.shared.pendingImage = UIImage(named: "cow_temp_1")
         withAnimation {
             path.append(.aiProcessing)
         }
@@ -191,7 +202,13 @@ struct CameraView: View {
             switch result {
             case .success(let prediction):
                 AuthManager.shared.currentPrediction = prediction
-                path.append(.detectionResult)
+                if let message = prediction.message {
+                    // This is the "Not Cattle/Buffalo" rejection
+                    self.rejectionMessage = message
+                    self.showRejectionAlert = true
+                } else {
+                    path.append(.detectionResult)
+                }
             case .failure(let error):
                 self.uploadError = error.localizedDescription
             }

@@ -36,7 +36,7 @@ struct PerformanceTrendsView: View {
                 .padding(.horizontal, 24)
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
             fetchAnalytics()
             withAnimation {
@@ -66,9 +66,9 @@ struct PerformanceTrendsView: View {
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             
             Text("Performance Trends")
@@ -102,9 +102,9 @@ struct PerformanceTrendsView: View {
             }
             
             VStack(spacing: 8) {
-                Text(String(format: "%.1f L/day", analytics?.average_accuracy ?? 0.0)) // Reusing accuracy field for demo or updating backend to provided avg_yield
+                Text(String(format: "%.1f L/day", analytics?.average_yield ?? 0.0))
                     .font(.system(size: 34, weight: .black))
-                    .foregroundColor(Color(hex: "4A148C"))
+                    .foregroundColor(.primary)
                 
                 HStack(spacing: 4) {
                     Image(systemName: "chart.line.uptrend.xyaxis")
@@ -123,9 +123,9 @@ struct PerformanceTrendsView: View {
             )
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .padding(.top, 20)
         .opacity(appeared ? 1 : 0)
         .scaleEffect(appeared ? 1 : 0.95)
@@ -212,9 +212,9 @@ struct PerformanceTrendRow: View {
             .foregroundColor(item.isPositive ? .green : .orange)
         }
         .padding(16)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.02), radius: 5, x: 0, y: 2)
+        .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
     }
 }
 

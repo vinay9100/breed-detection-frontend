@@ -19,8 +19,9 @@ struct ScanRow: View {
                     if !imageName.isEmpty, let image = UIImage(named: imageName) {
                         Image(uiImage: image)
                             .resizable()
-                            .aspectRatio(contentMode: .fill)
+                            .scaledToFill()
                             .frame(width: 70, height: 70)
+                            .clipped()
                             .cornerRadius(15)
                     } else {
                         ZStack {
@@ -67,7 +68,7 @@ struct ScanRow: View {
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 16)
-            .background(Color.white)
+            .background(Color(.secondarySystemGroupedBackground))
             .cornerRadius(25)
             .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
         }

@@ -89,8 +89,8 @@ struct LoginView: View {
                     .fill(
                         LinearGradient(
                             colors: isBPAOfficer
-                                ? [Color(hex: "1B5E20").opacity(0.3), .white]
-                                : [Color(hex: "00A661").opacity(0.3), .white],
+                                ? [Color(hex: "1B5E20").opacity(0.3), Color.cardBackground]
+                                : [Color(hex: "00A661").opacity(0.3), Color.cardBackground],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -98,10 +98,12 @@ struct LoginView: View {
                     .frame(width: 110, height: 110)
                     .shadow(color: .black.opacity(0.1), radius: 8)
 
-                // 🔥 WORKING CATTLE STYLE ICON
-                Image(systemName: isBPAOfficer ? "shield.fill" : "leaf.fill")
-                    .font(.system(size: 45))
-                    .foregroundColor(isBPAOfficer ? Color(hex: "1B5E20") : Color(hex: "00A661"))
+                // 🔥 New Futuristic App Logo
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 80, height: 80)
+                    .clipShape(Circle())
             }
             .scaleEffect(appeared ? 1 : 0.3)
             .opacity(appeared ? 1 : 0)
@@ -109,6 +111,7 @@ struct LoginView: View {
 
             Text("Welcome Back")
                 .font(.title.bold())
+                .foregroundColor(.primary)
 
             Text("Sign in to BreedSure AI")
                 .font(.subheadline)
@@ -147,8 +150,9 @@ struct LoginView: View {
                 )
                 .keyboardType(.emailAddress)
                 .autocapitalization(.none)
+                .disableAutocorrection(true)
                 .padding()
-                .background(Color(.systemGray6))
+                .background(Color.cardBackground)
                 .cornerRadius(12)
                 .onChange(of: loginId) { emailError = "" }
 
@@ -165,8 +169,12 @@ struct LoginView: View {
                     Group {
                         if showPassword {
                             TextField("Password", text: $password)
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
                         } else {
                             SecureField("Password", text: $password)
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
                         }
                     }
                     
@@ -178,7 +186,7 @@ struct LoginView: View {
                     }
                 }
                 .padding()
-                .background(Color(.systemGray6))
+                .background(Color.cardBackground)
                 .cornerRadius(12)
                 .onChange(of: password) { loginError = false }
 

@@ -37,8 +37,8 @@ struct RegistrationGrowthChartView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Registration Growth")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(Color(hex: "1B5E20"))
-                    Text("Total 138 registrations")
+                        .foregroundColor(.primary)
+                    Text("Total \(rawData.reduce(0) { $0 + $1.value }) registrations")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                 }
@@ -74,13 +74,21 @@ struct RegistrationGrowthChartView: View {
                         }
                     }
                     
-                    // Area Gradient
+                    // Area Gradient (Stock Market Style)
                     Path { path in
+                        guard data.count > 1 else { return }
+                        let points = data.enumerated().map { i, item in
+                            CGPoint(x: stepX * CGFloat(i), y: height - (CGFloat(item.value) / max(CGFloat(maxVal * 1.2), 1)) * height)
+                        }
+                        
                         path.move(to: CGPoint(x: 0, y: height))
-                        for i in 0..<data.count {
-                            let x = stepX * CGFloat(i)
-                            let y = height - (CGFloat(data[i].value) / CGFloat(maxVal * 1.2)) * height
-                            path.addLine(to: CGPoint(x: x, y: y))
+                        path.addLine(to: points[0])
+                        for i in 0..<points.count - 1 {
+                            let p1 = points[i]
+                            let p2 = points[i+1]
+                            let midPoint = CGPoint(x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2)
+                            path.addQuadCurve(to: midPoint, control: p1)
+                            path.addQuadCurve(to: p2, control: midPoint)
                         }
                         path.addLine(to: CGPoint(x: width, y: height))
                         path.closeSubpath()
@@ -94,16 +102,20 @@ struct RegistrationGrowthChartView: View {
                     )
                     .opacity(lineAnimationProgress)
 
-                    // Line Chart
+                    // Line Chart (Stock Market Style - Smooth)
                     Path { path in
-                        for i in 0..<data.count {
-                            let x = stepX * CGFloat(i)
-                            let y = height - (CGFloat(data[i].value) / CGFloat(maxVal * 1.2)) * height
-                            if i == 0 {
-                                path.move(to: CGPoint(x: x, y: y))
-                            } else {
-                                path.addLine(to: CGPoint(x: x, y: y))
-                            }
+                        guard data.count > 1 else { return }
+                        let points = data.enumerated().map { i, item in
+                            CGPoint(x: stepX * CGFloat(i), y: height - (CGFloat(item.value) / max(CGFloat(maxVal * 1.2), 1)) * height)
+                        }
+                        
+                        path.move(to: points[0])
+                        for i in 0..<points.count - 1 {
+                            let p1 = points[i]
+                            let p2 = points[i+1]
+                            let midPoint = CGPoint(x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2)
+                            path.addQuadCurve(to: midPoint, control: p1)
+                            path.addQuadCurve(to: p2, control: midPoint)
                         }
                     }
                     .trim(from: 0, to: lineAnimationProgress)
@@ -113,7 +125,7 @@ struct RegistrationGrowthChartView: View {
                             startPoint: .leading,
                             endPoint: .trailing
                         ),
-                        style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
+                        style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
                     )
                     
                     // Selected Point Highlight
@@ -145,9 +157,9 @@ struct RegistrationGrowthChartView: View {
                         
                         // Point inner circle
                         Circle()
-                            .fill(Color.white)
+                            .fill(Color.cardBackground)
                             .frame(width: 12, height: 12)
-                            .overlay(Circle().stroke(Color(hex: "1B5E20"), lineWidth: 3))
+                            .overlay(Circle().stroke(Color.primaryGreen, lineWidth: 3))
                             .position(x: x, y: y)
                             .shadow(color: Color(hex: "00A661").opacity(0.4), radius: 8)
                     }
@@ -183,16 +195,16 @@ struct RegistrationGrowthChartView: View {
                 ForEach(data) { item in
                     Text(item.day)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(selectedPoint?.id == item.id ? Color(hex: "1B5E20") : .secondary)
+                        .foregroundColor(selectedPoint?.id == item.id ? Color.primaryGreen : .secondary)
                         .frame(maxWidth: .infinity)
                 }
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
         }
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
-        .shadow(color: Color.black.opacity(0.04), radius: 20, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 20, x: 0, y: 10)
         .overlay(
             Group {
                 if let selected = selectedPoint, showTooltip {
@@ -231,22 +243,21 @@ struct TooltipView: View {
                 .font(.system(size: 10, weight: .bold))
                 .foregroundColor(.white.opacity(0.8))
             Text(value)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(hex: "1B5E20"))
+                    .fill(Color.secondaryAppBackground)
                 
                 // Triangle pointer
                 Image(systemName: "triangle.fill")
                     .resizable()
                     .frame(width: 12, height: 6)
                     .rotationEffect(.degrees(180))
-                    .foregroundColor(Color(hex: "1B5E20"))
+                    .foregroundColor(Color.secondaryAppBackground)
                     .offset(y: 16)
             }
         )

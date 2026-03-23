@@ -11,7 +11,7 @@ struct RegisterView: View {
     @State private var showPassword = false
     @State private var showConfirmPassword = false
     @State private var isRegistering = false
-    @State private var emailError = ""
+    @State private var formError = ""
 
     var body: some View {
         ZStack {
@@ -52,14 +52,11 @@ struct RegisterView: View {
                 Circle()
                     .fill(Color.green.opacity(0.10))
                     .frame(width: 80, height: 80)
-                Image(systemName: "person.badge.plus.fill")
-                    .font(.system(size: 34, weight: .semibold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.green, .green.opacity(0.5)],
-                            startPoint: .top, endPoint: .bottom
-                        )
-                    )
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 60, height: 60)
+                    .clipShape(Circle())
             }
             .scaleEffect(appeared ? 1 : 0.3)
             .opacity(appeared ? 1 : 0)
@@ -84,6 +81,8 @@ struct RegisterView: View {
         VStack(spacing: 14) {
             InputField(icon: "person.fill", placeholder: "Full Name") {
                 TextField("Full Name", text: $fullName)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
             }
             .opacity(appeared ? 1 : 0)
             .offset(x: appeared ? 0 : -20)
@@ -94,11 +93,13 @@ struct RegisterView: View {
                     TextField("Email address", text: $email)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                        .padding()
                         .textContentType(.emailAddress)
                 }
                 
-                if !emailError.isEmpty {
-                    Text(emailError)
+                if !formError.isEmpty {
+                    Text(formError)
                         .font(.system(size: 11))
                         .foregroundColor(.red)
                         .padding(.leading, 4)
@@ -118,21 +119,26 @@ struct RegisterView: View {
             .offset(x: appeared ? 0 : 20)
             .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.35), value: appeared)
             .onChange(of: email) { _, newValue in
-                if !newValue.isEmpty && !newValue.lowercased().hasSuffix("@gmail.com") {
-                    emailError = "Please use a valid @gmail.com address"
-                } else {
-                    emailError = ""
+                // Only clear error if user starts typing a potential valid gmail
+                if newValue.lowercased().hasSuffix("@gmail.com") {
+                    formError = ""
                 }
             }
+            .onChange(of: password) { _, _ in formError = "" }
+            .onChange(of: confirmPassword) { _, _ in formError = "" }
 
             VStack(alignment: .leading, spacing: 8) {
                 InputField(icon: "lock.fill", placeholder: "Password") {
                     if showPassword {
                         TextField("Password", text: $password)
                             .textContentType(.newPassword)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
                     } else {
                         SecureField("Password", text: $password)
                             .textContentType(.newPassword)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
                     }
                 } trailing: {
                     Button { showPassword.toggle() } label: {
@@ -153,9 +159,13 @@ struct RegisterView: View {
                 if showConfirmPassword {
                     TextField("Confirm Password", text: $confirmPassword)
                         .textContentType(.newPassword)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
                 } else {
                     SecureField("Confirm Password", text: $confirmPassword)
                         .textContentType(.newPassword)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
                 }
             } trailing: {
                 Button { showConfirmPassword.toggle() } label: {
@@ -216,16 +226,24 @@ struct RegisterView: View {
             guard !isRegistering else { return }
             
             if !email.lowercased().hasSuffix("@gmail.com") {
-                withAnimation { emailError = "Please use a valid @gmail.com address" }
+                withAnimation { formError = "Please use a valid @gmail.com address" }
+                return
+            }
+            
+            if password != confirmPassword {
+                withAnimation { formError = "Passwords do not match" }
                 return
             }
             
             withAnimation { isRegistering = true }
             
+            let cleanedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+            let cleanedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+            
             let req = RegisterRequest(
-                email: email,
+                email: cleanedEmail,
                 password: password,
-                full_name: fullName,
+                full_name: cleanedName,
                 phone_number: nil
             )
             
@@ -234,9 +252,9 @@ struct RegisterView: View {
                 
                 switch result {
                 case .success(_):
-                    path.append(.otpVerification(identifier: email))
+                    path.append(.otpVerification(identifier: cleanedEmail, isPasswordReset: false))
                 case .failure(let error):
-                    withAnimation { emailError = error.localizedDescription }
+                    withAnimation { formError = error.localizedDescription }
                 }
             }
         } label: {

@@ -4,6 +4,10 @@ struct CareRecommendationsView: View {
     @Binding var path: [AppRoute]
     @State private var appeared = false
     
+    var prediction: PredictResponse? {
+        AuthManager.shared.currentPrediction
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             navigationBar
@@ -24,7 +28,7 @@ struct CareRecommendationsView: View {
                 .padding()
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
             appeared = true
         }
@@ -35,15 +39,17 @@ struct CareRecommendationsView: View {
     private var navigationBar: some View {
         HStack {
             Button(action: {
-                _ = path.removeLast()
+                if !path.isEmpty {
+                    _ = path.removeLast()
+                }
             }) {
                 Image(systemName: "arrow.left")
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             Text("Care Recommendations")
                 .font(.system(size: 20, weight: .bold))
@@ -68,16 +74,16 @@ struct CareRecommendationsView: View {
             VStack(spacing: 8) {
                 Text("Personalized Care Plan")
                     .font(.title3.bold())
-                Text("Optimized for Holstein-Friesian breed")
+                Text("Optimized for \(prediction?.breed_name ?? "General cattle")")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
         }
         .padding(.vertical, 35)
         .frame(maxWidth: .infinity)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .scaleEffect(appeared ? 1 : 0.95)
         .opacity(appeared ? 1 : 0)
         .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.1), value: appeared)
@@ -167,9 +173,9 @@ struct CareGuideItem: View {
         }
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(28)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(delay), value: appeared)

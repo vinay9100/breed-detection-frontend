@@ -21,7 +21,7 @@ struct ShareReportView: View {
                 .padding(.horizontal, 24)
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
             appeared = true
         }
@@ -40,9 +40,9 @@ struct ShareReportView: View {
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             Text("Share Report")
                 .font(.system(size: 20, weight: .bold))
@@ -64,9 +64,9 @@ struct ShareReportView: View {
         }
         .padding(25)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(25)
-        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
         .padding(.top, 10)
     }
     
@@ -117,9 +117,9 @@ struct ShareReportView: View {
                 }
             }
             .padding(20)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(25)
-            .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 4)
+            .shadow(color: Color.shadowColor, radius: 8, x: 0, y: 4)
         }
     }
     
@@ -136,9 +136,9 @@ struct ShareReportView: View {
         }
         .padding(25)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(25)
-        .shadow(color: Color.black.opacity(0.02), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
     }
     
     private var securityNote: some View {
@@ -152,11 +152,11 @@ struct ShareReportView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: "FFF9E6"))
+        .background(Color.orange.opacity(0.1))
         .cornerRadius(15)
         .overlay(
             RoundedRectangle(cornerRadius: 15)
-                .stroke(Color(hex: "FFECB3"), lineWidth: 1)
+                .stroke(Color.orange.opacity(0.2), lineWidth: 1)
         )
     }
 }
@@ -194,9 +194,9 @@ struct ShareOptionRow: View {
                     .foregroundColor(.gray.opacity(0.3))
             }
             .padding(16)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(22)
-            .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 4)
+            .shadow(color: Color.shadowColor, radius: 8, x: 0, y: 4)
         }
         .buttonStyle(ScaleButtonStyle())
     }

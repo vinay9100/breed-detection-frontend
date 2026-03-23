@@ -4,11 +4,11 @@ struct NotificationsView: View {
     @Binding var path: [AppRoute]
     @State private var appeared = false
     
-    let notifications = [
-        NotificationItem(icon: "calendar", iconColor: .blue, title: "Vaccination Due", message: "3 animals need vaccination this week", time: "2 hours ago", isUnread: true),
-        NotificationItem(icon: "exclamationmark.triangle.fill", iconColor: .orange, title: "Heat Stress Warning", message: "High temperatures expected tomorrow", time: "5 hours ago", isUnread: true),
-        NotificationItem(icon: "checkmark.circle.fill", iconColor: .green, title: "Report Generated", message: "Your monthly report is ready", time: "1 day ago", isUnread: false),
-        NotificationItem(icon: "chart.line.uptrend.xyaxis", iconColor: .purple, title: "Yield Improvement", message: "Average yield increased by 5.3%", time: "2 days ago", isUnread: false)
+    @State private var notifications = [
+        NotificationItem(icon: "calendar", iconColor: .blue, title: "Vaccination Due", message: "3 animals need vaccination this week", time: "2 hours ago", isUnread: true, route: .vaccinationPlanner),
+        NotificationItem(icon: "exclamationmark.triangle.fill", iconColor: .orange, title: "Heat Stress Warning", message: "High temperatures expected tomorrow", time: "5 hours ago", isUnread: true, route: .climateSuitability),
+        NotificationItem(icon: "checkmark.circle.fill", iconColor: .green, title: "Report Generated", message: "Your monthly report is ready", time: "1 day ago", isUnread: false, route: .bpaReports),
+        NotificationItem(icon: "chart.line.uptrend.xyaxis", iconColor: .purple, title: "Yield Improvement", message: "Average yield increased by 5.3%", time: "2 days ago", isUnread: false, route: .performanceTrends)
     ]
     
     var body: some View {
@@ -20,11 +20,22 @@ struct NotificationsView: View {
                     recentUpdatesHeader
                     
                     VStack(spacing: 12) {
-                        ForEach(Array(notifications.enumerated()), id: \.offset) { index, item in
-                            NotificationRow(item: item)
-                                .opacity(appeared ? 1 : 0)
-                                .offset(y: appeared ? 0 : 20)
-                                .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(Double(index) * 0.1 + 0.2), value: appeared)
+                        ForEach(notifications) { item in
+                            Button(action: {
+                                // Mark as read and navigate
+                                if let index = notifications.firstIndex(where: { $0.id == item.id }) {
+                                    notifications[index].isUnread = false
+                                }
+                                if let route = item.route {
+                                    path.append(route)
+                                }
+                            }) {
+                                NotificationRow(item: item)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .opacity(appeared ? 1 : 0)
+                            .offset(y: appeared ? 0 : 20)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(Double(notifications.firstIndex(where: { $0.id == item.id }) ?? 0) * 0.1 + 0.2), value: appeared)
                         }
                     }
                     
@@ -36,7 +47,7 @@ struct NotificationsView: View {
                 .padding(.horizontal, 24)
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
             appeared = true
         }
@@ -53,9 +64,9 @@ struct NotificationsView: View {
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             
             Text("Notifications")
@@ -73,13 +84,17 @@ struct NotificationsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Recent Updates")
                     .font(.system(size: 18, weight: .bold))
-                Text("2 unread")
+                Text("\(notifications.filter({$0.isUnread}).count) unread")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
             Spacer()
             Button("Mark all read") {
-                // Action
+                withAnimation {
+                    for i in 0..<notifications.count {
+                        notifications[i].isUnread = false
+                    }
+                }
             }
             .font(.system(size: 14, weight: .bold))
             .foregroundColor(.green)
@@ -101,22 +116,24 @@ struct NotificationsView: View {
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(28)
-        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.6), value: appeared)
     }
 }
 
-struct NotificationItem {
+struct NotificationItem: Identifiable {
+    let id = UUID()
     let icon: String
     let iconColor: Color
     let title: String
     let message: String
     let time: String
-    let isUnread: Bool
+    var isUnread: Bool
+    var route: AppRoute? = nil
 }
 
 struct NotificationRow: View {
@@ -160,9 +177,9 @@ struct NotificationRow: View {
             }
         }
         .padding(16)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(22)
-        .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 4)
+        .shadow(color: Color.shadowColor, radius: 8, x: 0, y: 4)
     }
 }
 

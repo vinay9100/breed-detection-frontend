@@ -8,7 +8,7 @@ struct BPARegistrationSuccessView: View {
     
     var body: some View {
         ZStack {
-            Color(hex: "F8FBF9").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
             // Background Elements (Abstract shapes for "premium" feel)
             Circle()
@@ -47,7 +47,7 @@ struct BPARegistrationSuccessView: View {
                 VStack(spacing: 12) {
                     Text("Registration Successful")
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(Color(hex: "1B5E20"))
+                        .foregroundColor(.primary)
                     
                     Text("The animal registration record for **ET-2024-8472** has been successfully added to the BPA Government Database.")
                         .font(.system(size: 16))
@@ -70,13 +70,13 @@ struct BPARegistrationSuccessView: View {
                     Divider()
                     
                     HStack {
-                        DetailItem(label: "Submitted By", value: "Officer John Smith")
+                        DetailItem(label: "Submitted By", value: AuthManager.shared.currentUser?.fullName ?? "BPA Officer")
                         Spacer()
-                        DetailItem(label: "Timestamp", value: "Feb 13, 2026")
+                        DetailItem(label: "Timestamp", value: DateFormatter.localizedString(from: Date(), dateStyle: .medium, timeStyle: .none))
                     }
                 }
                 .padding(24)
-                .background(Color.white)
+                .background(Color.cardBackground)
                 .cornerRadius(24)
                 .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
                 .padding(.horizontal, 24)
@@ -102,8 +102,7 @@ struct BPARegistrationSuccessView: View {
                     .buttonStyle(ScaleButtonStyle())
                     
                     Button(action: {
-                        // Logic to pop or push
-                        path.removeLast(3) // Go back to Registration (initial)
+                        path = [.bpaDashboard, .bpaAnimalRegistration] // Go back to Registration (initial)
                     }) {
                         Text("Register Another Animal")
                             .font(.system(size: 16, weight: .bold))
@@ -148,7 +147,7 @@ struct DetailItem: View {
             } else {
                 Text(value)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(Color(hex: "1B5E20"))
+                    .foregroundColor(.primary)
             }
         }
     }

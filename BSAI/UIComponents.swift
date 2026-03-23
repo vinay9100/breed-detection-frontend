@@ -47,6 +47,26 @@ extension Color {
             opacity: Double(a) / 255
         )
     }
+    
+    static var cardBackground: Color {
+        Color(.secondarySystemGroupedBackground)
+    }
+    
+    static var appBackground: Color {
+        Color(.systemGroupedBackground)
+    }
+    
+    static var secondaryAppBackground: Color {
+        Color(.systemBackground)
+    }
+    
+    static var shadowColor: Color {
+        Color.black.opacity(0.06)
+    }
+    
+    static var primaryGreen: Color {
+        Color(hex: "00C853")
+    }
 }
 
 // MARK: - Shared Views
@@ -80,9 +100,9 @@ struct InsightCard: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(24)
-            .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
+            .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
         }
         .buttonStyle(ScaleButtonStyle())
     }
@@ -141,3 +161,28 @@ struct PressScaleButtonStyle: ButtonStyle {
     }
 }
 
+// MARK: - Image Utilities
+extension UIImage {
+    func resized(to targetSize: CGSize) -> UIImage? {
+        guard size.width > 0 && size.height > 0 else { return nil }
+        
+        // Calculate aspect ratio
+        let widthRatio  = targetSize.width  / size.width
+        let heightRatio = targetSize.height / size.height
+        
+        let newSize: CGSize
+        if widthRatio > heightRatio {
+            newSize = CGSize(width: size.width * heightRatio, height: size.height * heightRatio)
+        } else {
+            newSize = CGSize(width: size.width * widthRatio, height: size.height * widthRatio)
+        }
+        
+        if newSize.width <= 0 || newSize.height <= 0 { return nil }
+        
+        // Use UIGraphicsImageRenderer for better memory efficiency
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            self.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+    }
+}

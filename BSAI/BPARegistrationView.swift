@@ -11,7 +11,7 @@ struct BPARegistrationView: View {
     @State private var showPassword = false
     @State private var showConfirmPassword = false
     @State private var isRegistering = false
-    @State private var emailError = ""
+    @State private var formError = ""
 
     var body: some View {
         ZStack {
@@ -98,8 +98,8 @@ struct BPARegistrationView: View {
                         .textContentType(.emailAddress)
                 }
                 
-                if !emailError.isEmpty {
-                    Text(emailError)
+                if !formError.isEmpty {
+                    Text(formError)
                         .font(.system(size: 11))
                         .foregroundColor(.red)
                         .padding(.leading, 4)
@@ -116,6 +116,9 @@ struct BPARegistrationView: View {
                 .padding(.leading, 4)
             }
             .opacity(appeared ? 1 : 0)
+            .onChange(of: email) { _, _ in formError = "" }
+            .onChange(of: password) { _, _ in formError = "" }
+            .onChange(of: confirmPassword) { _, _ in formError = "" }
             .offset(x: appeared ? 0 : -20)
             .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.35), value: appeared)
 
@@ -210,29 +213,41 @@ struct BPARegistrationView: View {
             guard !isRegistering else { return }
             
             // Validate Input
-            emailError = ""
+            formError = ""
             
             if email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                withAnimation { emailError = "Email is required" }
+                withAnimation { formError = "Email is required" }
                 return
             }
             
+            // Must start with BPA-
             if !email.uppercased().hasPrefix("BPA-") {
-                withAnimation { emailError = "Officer email must start with BPA-" }
+                withAnimation { formError = "Officer email must start with BPA-" }
+                return
+            }
+
+            // Validate real email after removing BPA-
+            let realEmail = String(email.dropFirst(4))
+
+            if !realEmail.contains("@") || !realEmail.contains(".") {
+                withAnimation { formError = "Enter a valid email after BPA-" }
                 return
             }
             
             if password != confirmPassword {
-                withAnimation { emailError = "Passwords do not match" }
+                withAnimation { formError = "Passwords do not match" }
                 return
             }
             
             withAnimation { isRegistering = true }
             
+            let cleanedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+            let cleanedName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+            
             let req = BPARegisterRequest(
-                email: email,
+                email: cleanedEmail,
                 password: password,
-                full_name: fullName,
+                full_name: cleanedName,
                 phone_number: nil
             )
             
@@ -241,9 +256,9 @@ struct BPARegistrationView: View {
                 
                 switch result {
                 case .success(_):
-                    path.append(.bpaOTPVerification(identifier: req.email))
+                    path.append(.bpaOTPVerification(identifier: req.email, isPasswordReset: false))
                 case .failure(let error):
-                    withAnimation { emailError = error.localizedDescription }
+                    withAnimation { formError = error.localizedDescription }
                 }
             }
         } label: {

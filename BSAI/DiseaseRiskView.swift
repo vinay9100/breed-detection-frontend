@@ -4,6 +4,17 @@ struct DiseaseRiskView: View {
     @Binding var path: [AppRoute]
     @State private var appeared = false
     
+    var prediction: PredictResponse? {
+        AuthManager.shared.currentPrediction
+    }
+    
+    var breedInfo: BreedInfo? {
+        if let breedName = prediction?.breed_name {
+            return BreedRepository.getBreed(named: breedName)
+        }
+        return nil
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             navigationBar
@@ -31,14 +42,20 @@ struct DiseaseRiskView: View {
     private var navigationBar: some View {
         HStack {
             Button(action: {
-                _ = path.removeLast()
+                if !path.isEmpty {
+                    _ = path.removeLast()
+                }
             }) {
                 Image(systemName: "arrow.left")
-                    .font(.title3)
+                    .font(.title3.bold())
                     .foregroundColor(.primary)
+                    .padding(12)
+                    .background(Color.cardBackground)
+                    .clipShape(Circle())
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             Text("Disease Risk Profile")
-                .font(.headline)
+                .font(.system(size: 20, weight: .bold))
                 .padding(.leading, 10)
             Spacer()
         }
@@ -57,18 +74,18 @@ struct DiseaseRiskView: View {
                     .foregroundColor(.green)
             }
             
-            Text("Low Overall Risk")
+            Text(breedInfo?.productivity == "Excellent" ? "Low Overall Risk" : "Moderate Risk")
                 .font(.title2.bold())
             
-            Text("With proper management and care")
+            Text("Tailored for \(prediction?.breed_name ?? "this breed") ecosystem")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
         .padding(30)
         .frame(maxWidth: .infinity)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
-        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
     }
     
     private var commonHealthConcernsSection: some View {
@@ -102,9 +119,9 @@ struct DiseaseRiskView: View {
         }
         .padding(25)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(25)
-        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
     }
 }
 
@@ -143,9 +160,9 @@ struct HealthConcernRow: View {
             }
         }
         .padding()
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(18)
-        .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
+        .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
     }
 }
 

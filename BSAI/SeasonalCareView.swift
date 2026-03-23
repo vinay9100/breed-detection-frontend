@@ -4,6 +4,38 @@ struct SeasonalCareView: View {
     @Binding var path: [AppRoute]
     @State private var appeared = false
     
+    var prediction: PredictResponse? {
+        AuthManager.shared.currentPrediction
+    }
+    
+    private var currentSeason: String {
+        // March to June: Summer
+        // July to October: Monsoon
+        // November to February: Winter
+        let month = Calendar.current.component(.month, from: Date())
+        switch month {
+        case 3...6: return "Summer"
+        case 7...10: return "Monsoon"
+        default: return "Winter"
+        }
+    }
+    
+    private var seasonIcon: String {
+        switch currentSeason {
+        case "Summer": return "sun.max.fill"
+        case "Monsoon": return "cloud.rain.fill"
+        default: return "snowflake"
+        }
+    }
+    
+    private var seasonColor: Color {
+        switch currentSeason {
+        case "Summer": return .orange
+        case "Monsoon": return .blue
+        default: return .cyan
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             navigationBar
@@ -24,7 +56,7 @@ struct SeasonalCareView: View {
                 .padding()
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
             appeared = true
         }
@@ -35,15 +67,17 @@ struct SeasonalCareView: View {
     private var navigationBar: some View {
         HStack {
             Button(action: {
-                _ = path.removeLast()
+                if !path.isEmpty {
+                    _ = path.removeLast()
+                }
             }) {
                 Image(systemName: "arrow.left")
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             Text("Seasonal Care")
                 .font(.system(size: 20, weight: .bold))
@@ -56,26 +90,26 @@ struct SeasonalCareView: View {
     
     private var seasonBanner: some View {
         HStack(spacing: 15) {
-            Image(systemName: "snow")
+            Image(systemName: seasonIcon)
                 .font(.title)
-                .foregroundColor(.blue)
+                .foregroundColor(seasonColor)
                 .padding(12)
-                .background(Color.blue.opacity(0.1))
+                .background(seasonColor.opacity(0.1))
                 .clipShape(Circle())
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("Current Season: Winter")
+                Text("Current Season: \(currentSeason)")
                     .font(.headline)
-                Text("Focus on warmth and nutrition")
+                Text("Optimized for \(prediction?.breed_name ?? "General cattle")")
                     .font(.subheadline)
-                    .foregroundColor(.blue)
+                    .foregroundColor(seasonColor)
             }
             Spacer()
         }
         .padding(20)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(25)
-        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
         .scaleEffect(appeared ? 1 : 0.95)
         .opacity(appeared ? 1 : 0)
         .animation(.spring(response: 0.5, dampingFraction: 0.75).delay(0.1), value: appeared)
@@ -89,7 +123,8 @@ struct SeasonalCareView: View {
                 iconColor: .orange,
                 items: ["Provide shade", "Install cooling systems", "Increase water supply", "Monitor heat stress"],
                 delay: 0.2,
-                appeared: appeared
+                appeared: appeared,
+                isHighlighted: currentSeason == "Summer"
             )
             
             SeasonalGuideCard(
@@ -98,7 +133,8 @@ struct SeasonalCareView: View {
                 iconColor: .blue,
                 items: ["Ensure drainage", "Prevent moisture buildup", "Extra bedding", "Watch for hoof issues"],
                 delay: 0.3,
-                appeared: appeared
+                appeared: appeared,
+                isHighlighted: currentSeason == "Monsoon"
             )
             
             SeasonalGuideCard(
@@ -108,7 +144,7 @@ struct SeasonalCareView: View {
                 items: ["Provide warm shelter", "Increase feed energy", "Check for drafts", "Maintain dry bedding"],
                 delay: 0.4,
                 appeared: appeared,
-                isHighlighted: true
+                isHighlighted: currentSeason == "Winter"
             )
         }
     }
@@ -165,9 +201,9 @@ struct SeasonalGuideCard: View {
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(28)
-        .shadow(color: Color.black.opacity(isHighlighted ? 0.08 : 0.03), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .overlay(
             RoundedRectangle(cornerRadius: 28)
                 .stroke(isHighlighted ? iconColor.opacity(0.2) : Color.clear, lineWidth: 2)

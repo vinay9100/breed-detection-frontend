@@ -35,7 +35,7 @@ struct BreedComparisonView: View {
                         // VS Badge
                         ZStack {
                             Circle()
-                                .fill(Color.white)
+                                .fill(Color.cardBackground)
                                 .frame(width: 40, height: 40)
                                 .shadow(color: .black.opacity(0.1), radius: 5)
                             Text("VS")
@@ -65,7 +65,7 @@ struct BreedComparisonView: View {
                 }
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .sheet(isPresented: $showBreedPicker) {
             BreedPickerView(selectedBreed: pickingForDetected ? $detectedBreed : $comparisonBreed)
         }
@@ -85,7 +85,7 @@ struct BreedComparisonView: View {
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
                     .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
             }
@@ -124,7 +124,7 @@ struct BreedComparisonView: View {
             }
         }
         .padding(25)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
         .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
         .padding(.horizontal, 24)
@@ -167,7 +167,7 @@ struct ComparisonBreedCard: View {
                 }
             }
             .padding(20)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(24)
 
             .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)

@@ -1,219 +1,216 @@
 import SwiftUI
+import PhotosUI
 
 struct AIProcessingView: View {
     @Binding var path: [AppRoute]
+    
     @State private var progress: CGFloat = 0.0
-    @State private var currentStep = 0
+    @State private var currentStepIndex: Int = 0
+    @State private var rotation: Double = 0.0
     @State private var appeared = false
+    @State private var showRejectionAlert = false
+    @State private var rejectionMessage = ""
+    @State private var processingStarted = false
     
     let steps = [
-        "Analyzing image quality...",
-        "Detecting key features...",
-        "Comparing breed patterns...",
-        "Calculating confidence score..."
+        "Analyzing physical features",
+        "Matching breed patterns",
+        "Calculating confidence score",
+        "Finalizing results"
     ]
-    
-    @State private var rotation: Double = 0
-    @State private var innerRotation: Double = 0
     
     var body: some View {
         ZStack {
-            // Premium Dark/Green Duo Background
-            ZStack {
-                Color(hex: "0A1A0F").ignoresSafeArea()
-                
-                // Animated glow
-                RadialGradient(colors: [Color.green.opacity(0.15), .clear], center: .center, startRadius: 0, endRadius: 400)
-                    .scaleEffect(appeared ? 1.5 : 0.8)
-                    .opacity(appeared ? 1 : 0)
-            }
-            .ignoresSafeArea()
+            Color(.systemBackground).ignoresSafeArea()
             
-            VStack(spacing: 0) {
+            VStack(spacing: 40) {
+                // Header
+                HStack {
+                    Button(action: { path.removeLast() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.primary)
+                            .padding(12)
+                            .background(Color(.systemGray6))
+                            .clipShape(Circle())
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 20)
+                
                 Spacer()
                 
-                // 1. Advanced Animated Scanner
+                // Progress Hexagon/Circle
                 ZStack {
-                    // Outer Ring
                     Circle()
-                        .stroke(Color.green.opacity(0.1), lineWidth: 4)
-                        .frame(width: 220, height: 220)
+                        .stroke(Color.green.opacity(0.1), lineWidth: 15)
+                        .frame(width: 200, height: 200)
                     
-                    // Rotating Gradient Ring
                     Circle()
-                        .trim(from: 0, to: 0.3)
+                        .trim(from: 0, to: progress)
                         .stroke(
-                            LinearGradient(colors: [.green, .clear], startPoint: .top, endPoint: .bottom),
-                            style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                            LinearGradient(colors: [.green, Color(hex: "4CAF50")], startPoint: .top, endPoint: .bottom),
+                            style: StrokeStyle(lineWidth: 15, lineCap: .round)
                         )
-                        .frame(width: 220, height: 220)
-                        .rotationEffect(.degrees(rotation))
+                        .frame(width: 200, height: 200)
+                        .rotationEffect(.degrees(-90))
                     
-                    // Inner Pulse
-                    Circle()
-                        .fill(Color.green.opacity(0.05))
-                        .frame(width: 160, height: 160)
-                        .scaleEffect(appeared ? 1.1 : 0.9)
-                        .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: appeared)
-                    
-                    // The "Brain" Box
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 32, style: .continuous)
-                            .fill(Color.white)
-                            .frame(width: 100, height: 100)
-                            .shadow(color: .green.opacity(0.3), radius: 20, x: 0, y: 10)
-                        
-                        Image(systemName: "brain.head.profile")
-                            .font(.system(size: 48, weight: .light))
+                    VStack(spacing: 8) {
+                        Image(systemName: "cpu.fill")
+                            .font(.system(size: 40))
                             .foregroundColor(.green)
-                            .symbolEffect(.bounce, options: .repeating, value: appeared)
-                    }
-                    
-                    // Floating Interactive Orbits
-                    ForEach(0..<3) { i in
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 8, height: 8)
-                            .offset(x: 110)
-                            .rotationEffect(.degrees(Double(i) * 120 + innerRotation))
+                            .rotationEffect(.degrees(rotation))
+                        
+                        Text("\(Int(progress * 100))%")
+                            .font(.system(size: 30, weight: .bold))
+                            .monospacedDigit()
                     }
                 }
-                .padding(.bottom, 60)
+                .scaleEffect(appeared ? 1 : 0.8)
+                .opacity(appeared ? 1 : 0)
                 
-                // 2. Title Section
-                VStack(spacing: 8) {
-                    Text("AI Brain Processing")
-                        .font(.system(size: 28, weight: .black, design: .rounded))
-                        .foregroundColor(.white)
+                VStack(spacing: 16) {
+                    Text("AI Breed Recognition")
+                        .font(.system(size: 24, weight: .bold))
                     
-                    Text("Analyzing unique breed characteristics...")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.6))
+                    Text("Analyzing the image to identify breed\ncharacteristics and physical markers...")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                }
+                
+                // Steps
+                VStack(alignment: .leading, spacing: 20) {
+                    ForEach(0..<steps.count, id: \.self) { index in
+                        HStack(spacing: 15) {
+                            ZStack {
+                                Circle()
+                                    .fill(currentStepIndex > index ? Color.green : Color.gray.opacity(0.1))
+                                    .frame(width: 24, height: 24)
+                                
+                                if currentStepIndex > index {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            
+                            Text(steps[index])
+                                .font(.system(size: 16, weight: currentStepIndex == index ? .semibold : .regular))
+                                .foregroundColor(currentStepIndex == index ? .primary : .secondary)
+                            
+                            if currentStepIndex == index {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .padding(.leading, 5)
+                            }
+                            
+                            Spacer()
+                        }
+                        .opacity(currentStepIndex >= index ? 1 : 0.3)
+                    }
                 }
                 .padding(.horizontal, 40)
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 20)
-                
-                // 3. Status Steps
-                VStack(spacing: 12) {
-                    ForEach(0..<steps.count, id: \.self) { index in
-                        ProcessingRow(
-                            text: steps[index],
-                            isCompleted: currentStep > index,
-                            isActive: currentStep == index
-                        )
-                        .opacity(currentStep >= index ? 1 : 0.3)
-                        .scaleEffect(currentStep == index ? 1.05 : 1.0)
-                        .animation(.spring(), value: currentStep)
-                    }
-                }
-                .padding(30)
+                .padding(.top, 20)
                 
                 Spacer()
-                
-                // 4. Custom Progress Bar
-                VStack(spacing: 15) {
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.white.opacity(0.1))
-                            .frame(height: 6)
-                        
-                        Capsule()
-                            .fill(LinearGradient(colors: [.green, Color(hex: "81C784")], startPoint: .leading, endPoint: .trailing))
-                            .frame(width: 280 * progress, height: 6)
-                    }
-                    .frame(width: 280)
-                    .shadow(color: .green.opacity(0.4), radius: 8, x: 0, y: 0)
-                    
-                    HStack(spacing: 4) {
-                        Text("\(Int(progress * 100))%")
-                            .fontWeight(.bold)
-                            .foregroundColor(.green)
-                        Text("Completed")
-                            .foregroundColor(.white.opacity(0.5))
-                    }
-                    .font(.caption)
-                }
-                .padding(.bottom, 40)
+                Spacer()
             }
         }
         .navigationBarHidden(true)
         .onAppear {
-            appeared = true
+            withAnimation(.spring()) { appeared = true }
             withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
                 rotation = 360
             }
-            withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
-                innerRotation = -360
-            }
             startProcessing()
+        }
+        .alert("Recognition Issue", isPresented: $showRejectionAlert) {
+            Button("Retake", role: .cancel) {
+                path.removeLast()
+            }
+        } message: {
+            Text(rejectionMessage)
         }
     }
     
     func startProcessing() {
-        // Dynamic timing for more "realistic" feel
-        let intervals: [TimeInterval] = [0.8, 1.2, 1.5, 1.0]
-        processNextStep(index: 0, intervals: intervals)
-    }
-    
-    func processNextStep(index: Int, intervals: [TimeInterval]) {
-        guard index < steps.count else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                withAnimation { path.append(.detectionResult) }
-            }
-            return
-        }
+        guard !processingStarted else { return }
+        processingStarted = true
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + intervals[index]) {
-            withAnimation(.spring()) {
-                currentStep = index + 1
-                progress = CGFloat(currentStep) / CGFloat(steps.count)
-            }
-            processNextStep(index: index + 1, intervals: intervals)
-        }
-    }
-}
-
-struct ProcessingRow: View {
-    let text: String
-    let isCompleted: Bool
-    let isActive: Bool
-    
-    var body: some View {
-        HStack(spacing: 15) {
-            ZStack {
-                Circle()
-                    .fill(isCompleted ? Color.green : (isActive ? Color.green.opacity(0.3) : Color.white.opacity(0.1)))
-                    .frame(width: 28, height: 28)
-                
-                if isCompleted {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.white)
-                } else if isActive {
-                    Circle()
-                        .stroke(Color.green, lineWidth: 2)
-                        .frame(width: 14, height: 14)
+        // Simulating milestones
+        let milestones: [(Double, Double, Int)] = [
+            (0.5, 0.25, 0),
+            (1.5, 0.50, 1),
+            (2.5, 0.75, 2),
+            (3.5, 0.90, 3)
+        ]
+        
+        for m in milestones {
+            DispatchQueue.main.asyncAfter(deadline: .now() + m.0) {
+                withAnimation {
+                    self.progress = m.1
+                    self.currentStepIndex = m.2
                 }
             }
-            
-            Text(text)
-                .font(.system(size: 15, weight: isActive ? .bold : .medium))
-                .foregroundColor(isActive || isCompleted ? .white : .white.opacity(0.4))
-            
-            Spacer()
-            
-            if isActive {
-                ProgressView()
-                    .tint(.green)
-                    .scaleEffect(0.8)
+        }
+        
+        // Actually upload if we have a pending image
+        if let image = AuthManager.shared.pendingImage {
+            AuthManager.shared.uploadImageForPrediction(image: image) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let prediction):
+                        AuthManager.shared.currentPrediction = prediction
+                        
+                        if let msg = prediction.message {
+                            // REJECTION CASE
+                            self.rejectionMessage = msg
+                            // Small delay for hierarchy stability
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                if self.appeared {
+                                    self.showRejectionAlert = true
+                                }
+                            }
+                        } else {
+                            // SUCCESS CASE - wait for progress to complete or jump
+                            withAnimation { self.progress = 1.0; self.currentStepIndex = 4 }
+                            
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                withAnimation { path.append(.detectionResult) }
+                            }
+                        }
+                        
+                    case .failure(let error):
+                        print("AI Error: \(error.localizedDescription)")
+                        self.rejectionMessage = "Could not reach the AI analyzer. Please check your connection."
+                        // Small delay for hierarchy stability
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            if self.appeared {
+                                self.showRejectionAlert = true
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // No image found? Just simulate and go
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                finishProcessing()
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .background(isActive ? Color.white.opacity(0.05) : Color.clear)
-        .cornerRadius(16)
+    }
+    
+    func finishProcessing() {
+        withAnimation {
+            progress = 1.0
+            currentStepIndex = steps.count
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            path.append(.detectionResult)
+        }
     }
 }
-

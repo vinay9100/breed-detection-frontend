@@ -3,6 +3,10 @@ import SwiftUI
 struct VaccinationPlannerView: View {
     @Binding var path: [AppRoute]
     @State private var appeared = false
+    @State private var vaccinations: [VaccinationRecord] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String? = nil
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -12,21 +16,83 @@ struct VaccinationPlannerView: View {
                 VStack(spacing: 25) {
                     summaryCard
                     
-                    Text("Vaccination Schedule")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 5)
+                    HStack {
+                        Text("Vaccination Schedule")
+                            .font(.headline)
+                        Spacer()
+                        Button(action: { path.append(.addVaccination) }) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(Color(hex: "00A661"))
+                        }
+                    }
+                    .padding(.top, 5)
                     
-                    vaccineScheduleList
+                    if isLoading {
+                        ProgressView()
+                            .padding()
+                    } else if vaccinations.isEmpty {
+                        VStack(spacing: 20) {
+                            Image(systemName: "calendar.badge.plus")
+                                .font(.system(size: 50))
+                                .foregroundColor(.secondary.opacity(0.3))
+                            Text("No vaccinations scheduled yet.")
+                                .foregroundColor(.secondary)
+                            Button("Add First One") {
+                                path.append(.addVaccination)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color(hex: "00A661"))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                        }
+                        .padding(.top, 40)
+                    } else {
+                        vaccineScheduleList
+                    }
                     
                     Spacer(minLength: 30)
                 }
                 .padding()
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
+            loadVaccinations()
             appeared = true
+        }
+        .alert("Error", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            if let msg = errorMessage {
+                Text(msg)
+            }
+        }
+    }
+    
+    private func loadVaccinations() {
+        isLoading = true
+        errorMessage = nil
+        AuthManager.shared.fetchVaccinations { result in
+            isLoading = false
+            switch result {
+            case .success(let data):
+                self.vaccinations = data
+            case .failure(let error):
+                print("DEBUG: Fetch Vaccinations failed: \(error)")
+                self.errorMessage = error.localizedDescription
+            }
+        }
+    }
+    
+    private func toggleCompletion(for vax: VaccinationRecord) {
+        if vax.status == "completed" { return } // Already done
+        
+        AuthManager.shared.completeVaccination(id: vax.id) { result in
+            if case .success = result {
+                loadVaccinations()
+            }
         }
     }
     
@@ -41,9 +107,9 @@ struct VaccinationPlannerView: View {
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.secondaryAppBackground)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             Text("Vaccination Planner")
                 .font(.system(size: 20, weight: .bold))
@@ -51,11 +117,14 @@ struct VaccinationPlannerView: View {
             Spacer()
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(Color.secondaryAppBackground)
     }
     
     private var summaryCard: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        let upcoming = vaccinations.filter { $0.status != "completed" }.count
+        let nextVax = vaccinations.filter { $0.status != "completed" }.first
+        
+        return VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 15) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 15)
@@ -67,7 +136,7 @@ struct VaccinationPlannerView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("3 Upcoming")
+                    Text("\(upcoming) Upcoming")
                         .font(.title3.bold())
                     Text("Vaccinations scheduled")
                         .font(.subheadline)
@@ -75,24 +144,26 @@ struct VaccinationPlannerView: View {
                 }
             }
             
-            HStack {
-                Image(systemName: "clock.fill")
-                    .font(.caption)
-                    .foregroundColor(.orange)
-                Text("Next due: **FMD Vaccine on Feb 15**")
-                    .font(.subheadline)
-                    .foregroundColor(.orange)
+            if let next = nextVax {
+                HStack {
+                    Image(systemName: "clock.fill")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    Text("Next due: **\(next.vaccine_name) on \(formatDate(next.planned_date))**")
+                        .font(.subheadline)
+                        .foregroundColor(.orange)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.orange.opacity(0.08))
+                .cornerRadius(12)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.orange.opacity(0.08))
-            .cornerRadius(12)
         }
         .padding(25)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .scaleEffect(appeared ? 1 : 0.95)
         .opacity(appeared ? 1 : 0)
         .animation(.spring(response: 0.6, dampingFraction: 0.75).delay(0.1), value: appeared)
@@ -100,16 +171,53 @@ struct VaccinationPlannerView: View {
     
     private var vaccineScheduleList: some View {
         VStack(spacing: 16) {
-            VaccineRow(name: "FMD Vaccine", type: "Every 6 months", date: "Feb 15, 2026", status: "Due Soon", statusColor: .orange, delay: 0.2, appeared: appeared)
-            VaccineRow(name: "Brucellosis", type: "Annual", date: "Completed", status: "Done", statusColor: .green, isDone: true, delay: 0.3, appeared: appeared)
-            VaccineRow(name: "Black Quarter", type: "Annual", date: "Mar 10, 2026", status: "Upcoming", statusColor: .blue, delay: 0.4, appeared: appeared)
-            VaccineRow(name: "Anthrax", type: "Annual", date: "Completed", status: "Done", statusColor: .green, isDone: true, delay: 0.5, appeared: appeared)
-            VaccineRow(name: "Hemorrhagic Septicemia", type: "Bi-annual", date: "Apr 22, 2026", status: "Scheduled", statusColor: .cyan, delay: 0.6, appeared: appeared)
+            ForEach(Array(vaccinations.enumerated()), id: \.element.id) { index, vax in
+                VaccineRow(
+                    name: vax.vaccine_name,
+                    type: vax.type ?? "General",
+                    date: formatDate(vax.planned_date),
+                    status: vax.status.capitalized,
+                    statusColor: statusColor(vax.status),
+                    isDone: vax.status == "completed",
+                    delay: 0.1 * Double(index),
+                    appeared: appeared
+                )
+                .onTapGesture {
+                    if vax.status != "completed" {
+                        toggleCompletion(for: vax)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func formatDate(_ isoString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = formatter.date(from: isoString)
+        if date == nil {
+            formatter.formatOptions = [.withInternetDateTime]
+            date = formatter.date(from: isoString)
+        }
+        
+        guard let d = date else { return isoString }
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateStyle = .medium
+        return displayFormatter.string(from: d)
+    }
+    
+    private func statusColor(_ status: String) -> Color {
+        switch status.lowercased() {
+        case "completed": return .green
+        case "scheduled": return .blue
+        case "overdue": return .red
+        default: return .orange
         }
     }
 }
 
 struct VaccineRow: View {
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
     let name: String
     let type: String
     let date: String
@@ -150,9 +258,9 @@ struct VaccineRow: View {
             }
         }
         .padding(20)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(22)
-        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 15)
         .animation(.spring(response: 0.5, dampingFraction: 0.8).delay(delay), value: appeared)
@@ -162,3 +270,4 @@ struct VaccineRow: View {
 #Preview {
     VaccinationPlannerView(path: .constant([]))
 }
+

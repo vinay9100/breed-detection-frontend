@@ -13,6 +13,7 @@ struct BPASearchView: View {
         } else {
             return allAnimals.filter { animal in
                 animal.ear_tag_number.localizedCaseInsensitiveContains(searchText) ||
+                (animal.animal_name ?? "").localizedCaseInsensitiveContains(searchText) ||
                 animal.owner_name.localizedCaseInsensitiveContains(searchText) ||
                 animal.village.localizedCaseInsensitiveContains(searchText) ||
                 animal.breed.localizedCaseInsensitiveContains(searchText) ||
@@ -23,7 +24,7 @@ struct BPASearchView: View {
     
     var body: some View {
         ZStack {
-            Color(hex: "F8FBF9").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 searchHeader
@@ -137,7 +138,7 @@ struct BPASearchView: View {
             )
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(24)
         .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
         .padding(.horizontal, 24)
@@ -150,14 +151,13 @@ struct BPASearchView: View {
         VStack(alignment: .leading, spacing: 15) {
             Text("Quick Filters")
                 .font(.system(size: 16, weight: .bold))
-                .foregroundColor(Color(hex: "1B5E20"))
+                .foregroundColor(.primary)
                 .padding(.horizontal, 24)
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     FilterCapsule(label: "Cattle", action: { searchText = "Cattle" })
                     FilterCapsule(label: "Buffalo", action: { searchText = "Buffalo" })
-                    FilterCapsule(label: "Haryana", action: { searchText = "Haryana" })
                 }
                 .padding(.horizontal, 24)
             }
@@ -168,7 +168,7 @@ struct BPASearchView: View {
         VStack(alignment: .leading, spacing: 15) {
             Text("Featured Animals")
                 .font(.system(size: 16, weight: .bold))
-                .foregroundColor(Color(hex: "1B5E20"))
+                .foregroundColor(.primary)
                 .padding(.horizontal, 24)
             
             if allAnimals.isEmpty {
@@ -179,7 +179,7 @@ struct BPASearchView: View {
             } else {
                 VStack(spacing: 12) {
                     ForEach(allAnimals.prefix(3), id: \.ear_tag_number) { animal in
-                        SearchResultRow(id: animal.ear_tag_number, breed: animal.breed, owner: animal.owner_name) {
+                        SearchResultRow(id: animal.ear_tag_number, name: animal.animal_name, breed: animal.breed, owner: animal.owner_name) {
                             path.append(.bpaAnimalDetail(data: animal))
                         }
                     }
@@ -193,12 +193,12 @@ struct BPASearchView: View {
         VStack(alignment: .leading, spacing: 15) {
             Text(searchText.isEmpty ? "All Animals" : "Search Results")
                 .font(.system(size: 16, weight: .bold))
-                .foregroundColor(Color(hex: "1B5E20"))
+                .foregroundColor(.primary)
                 .padding(.horizontal, 24)
             
             VStack(spacing: 12) {
                 ForEach(filteredAnimals, id: \.ear_tag_number) { animal in
-                    SearchResultRow(id: animal.ear_tag_number, breed: animal.breed, owner: animal.owner_name) {
+                    SearchResultRow(id: animal.ear_tag_number, name: animal.animal_name, breed: animal.breed, owner: animal.owner_name) {
                         path.append(.bpaAnimalDetail(data: animal))
                     }
                 }
@@ -210,6 +210,7 @@ struct BPASearchView: View {
 
 struct SearchResultRow: View {
     let id: String
+    let name: String?
     let breed: String
     let owner: String
     let action: () -> Void
@@ -226,10 +227,10 @@ struct SearchResultRow: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(id)
+                    Text(name ?? id)
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(Color(hex: "1B5E20"))
-                    Text("\(breed) • \(owner)")
+                        .foregroundColor(.primary)
+                    Text("\(id) • \(breed) • \(owner)")
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
@@ -241,7 +242,7 @@ struct SearchResultRow: View {
                     .foregroundColor(.gray.opacity(0.4))
             }
             .padding(16)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(18)
             .shadow(color: Color.black.opacity(0.02), radius: 5, x: 0, y: 2)
             .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.gray.opacity(0.1), lineWidth: 1))
@@ -259,10 +260,10 @@ struct FilterCapsule: View {
                 .font(.system(size: 14, weight: .medium))
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
-                .background(Color.white)
+                .background(Color.cardBackground)
                 .cornerRadius(14)
                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.gray.opacity(0.15), lineWidth: 1))
-                .foregroundColor(Color(hex: "1B5E20"))
+                .foregroundColor(.primary)
         }
     }
 }
@@ -279,7 +280,7 @@ struct RecentSearchRow: View {
             Spacer()
         }
         .padding(18)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(14)
         .shadow(color: Color.black.opacity(0.02), radius: 5, x: 0, y: 2)
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.gray.opacity(0.1), lineWidth: 1))

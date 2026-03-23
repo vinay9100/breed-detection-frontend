@@ -6,8 +6,8 @@ enum AppRoute: Hashable {
     case login
     case register
     case forgotPassword
-    case otpVerification(identifier: String)
-    case resetPassword
+    case otpVerification(identifier: String, isPasswordReset: Bool)
+    case resetPassword(token: String)
     case dashboard
     case scanGuide
     case camera
@@ -40,11 +40,10 @@ enum AppRoute: Hashable {
     case helpSupport
     
     // BPA Routes
-    // bpaLogin removed — unified LoginView handles both Farmer and BPA
     case bpaRegister
     case bpaForgotPassword
-    case bpaOTPVerification(identifier: String)
-    case bpaResetPassword
+    case bpaOTPVerification(identifier: String, isPasswordReset: Bool)
+    case bpaResetPassword(token: String)
     case bpaDashboard
     case bpaAnalytics
     case bpaReports
@@ -52,27 +51,45 @@ enum AppRoute: Hashable {
     case bpaAnimalRegistration
     case bpaRegistrationReview(data: AnimalRegistrationData)
     case bpaRegistrationSuccess
-    case bpaCamera
-    case bpaAIProcessing
-    case bpaDetectionResult
+    case bpaCamera(earTag: String? = nil)
+    case bpaAIProcessing(earTag: String? = nil)
+    case bpaDetectionResult(earTag: String? = nil)
     case bpaAnimalDetail(data: AnimalRegistrationData)
+    case addVaccination
 }
 
 // MARK: - App Root — owns the single NavigationStack
 struct AppRootView: View {
     @State private var path: [AppRoute] = []
     @State private var isLaunched = false
+    @ObservedObject private var authManager = AuthManager.shared
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
 
     var body: some View {
         ZStack {
             if isLaunched {
                 NavigationStack(path: $path) {
-                    LoginView(path: $path)
-                        .navigationBarHidden(true)
-                        .navigationDestination(for: AppRoute.self) { route in
-                            viewForRoute(route)
+                    ZStack {
+                        if authManager.isAuthenticated {
+                            if authManager.currentUser?.email.uppercased().hasPrefix("BPA-") == true {
+                                BPADashboardView(path: $path)
+                            } else if authManager.currentUser != nil {
+                                DashboardView(path: $path)
+                            } else {
+                                Color(.systemBackground).ignoresSafeArea()
+                                ProgressView("Recovering Session...")
+                                    .foregroundColor(.primary)
+                            }
+                        } else {
+                            LoginView(path: $path)
                         }
+                    }
+                    .navigationBarHidden(true)
+                    .navigationDestination(for: AppRoute.self) { route in
+                        viewForRoute(route)
+                    }
                 }
+                .preferredColorScheme(isDarkMode ? .dark : .light)
                 .transition(.opacity)
             } else {
                 SplashView(isLaunched: $isLaunched)
@@ -99,12 +116,12 @@ struct AppRootView: View {
         case .forgotPassword:
             ForgotPasswordView(path: $path)
 
-        case .otpVerification(let identifier):
-            OTPVerificationView(path: $path, identifier: identifier)
+        case .otpVerification(let identifier, let isPasswordReset):
+            OTPVerificationView(path: $path, identifier: identifier, isPasswordReset: isPasswordReset)
                 .navigationBarHidden(true)
 
-        case .resetPassword:
-            ResetPasswordView(path: $path)
+        case .resetPassword(let token):
+            ResetPasswordView(path: $path, token: token)
 
         case .dashboard:
             DashboardView(path: $path)
@@ -230,11 +247,11 @@ struct AppRootView: View {
         case .bpaForgotPassword:
             BPAForgotPasswordView(path: $path)
                 .navigationBarHidden(true)
-        case .bpaOTPVerification(let identifier):
-            BPAOTPVerificationView(path: $path, identifier: identifier)
+        case .bpaOTPVerification(let identifier, let isPasswordReset):
+            BPAOTPVerificationView(path: $path, identifier: identifier, isPasswordReset: isPasswordReset)
                 .navigationBarHidden(true)
-        case .bpaResetPassword:
-            BPAResetPasswordView(path: $path)
+        case .bpaResetPassword(let token):
+            BPAResetPasswordView(path: $path, token: token)
                 .navigationBarHidden(true)
         case .bpaDashboard:
             BPADashboardView(path: $path)
@@ -261,18 +278,170 @@ struct AppRootView: View {
         case .bpaRegistrationSuccess:
             BPARegistrationSuccessView(path: $path)
                 .navigationBarHidden(true)
-        case .bpaCamera:
-            BPACameraView(path: $path)
+        case .bpaCamera(let earTag):
+            BPACameraView(path: $path, earTag: earTag)
                 .navigationBarHidden(true)
-        case .bpaAIProcessing:
-            BPAAIProcessingView(path: $path)
+        case .bpaAIProcessing(let earTag):
+            BPAAIProcessingView(path: $path, earTag: earTag)
                 .navigationBarHidden(true)
-        case .bpaDetectionResult:
-            BPADetectionResultView(path: $path)
+        case .bpaDetectionResult(let earTag):
+            BPADetectionResultView(path: $path, earTag: earTag)
                 .navigationBarHidden(true)
         case .bpaAnimalDetail(let data):
             BPAAnimalDetailView(path: $path, animal: data)
                 .navigationBarHidden(true)
+        case .addVaccination:
+            AddVaccinationView(path: $path)
+                .navigationBarHidden(true)
+        }
+    }
+}
+
+struct AddVaccinationView: View {
+    @Binding var path: [AppRoute]
+    @State private var vaccineName: String = ""
+    @State private var vaccineType: String = "Annual"
+    @State private var selectedDate = Date()
+    @State private var isLoading = false
+    @State private var errorMessage: String? = nil
+    
+    let vaccineTypes = ["Annual", "Bi-annual", "One-time", "Monthly"]
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            navigationBar
+            
+            ScrollView {
+                VStack(spacing: 30) {
+                    headerSection
+                    
+                    formSection
+                    
+                    saveButton
+                        .padding(.top, 20)
+                }
+                .padding(24)
+            }
+        }
+        .background(Color.appBackground.ignoresSafeArea())
+        .overlay {
+            if isLoading {
+                ZStack {
+                    Color.black.opacity(0.1).ignoresSafeArea()
+                    ProgressView()
+                        .padding(20)
+                        .background(Color.cardBackground)
+                        .cornerRadius(12)
+                        .shadow(color: Color.shadowColor, radius: 10)
+                }
+            }
+        }
+    }
+    
+    private var navigationBar: some View {
+        HStack {
+            Button(action: { path.removeLast() }) {
+                Image(systemName: "arrow.left")
+                    .font(.title3.bold())
+                    .foregroundColor(.primary)
+                    .padding(12)
+                    .background(Color.cardBackground)
+                    .clipShape(Circle())
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
+            }
+            Spacer()
+        }
+        .padding()
+        .background(Color.clear)
+    }
+    
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Add Vaccination")
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+            Text("Schedule a new vaccination for your livestock to keep them healthy.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    private var formSection: some View {
+        VStack(spacing: 24) {
+            // Vaccine Name
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Vaccine Name")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.secondary)
+                
+                TextField("e.g. FMD Vaccine", text: $vaccineName)
+                    .padding()
+                    .background(Color.cardBackground)
+                    .cornerRadius(12)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
+            }
+            
+            // Vaccine Type
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Frequency")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.secondary)
+                
+                Picker("Type", selection: $vaccineType) {
+                    ForEach(vaccineTypes, id: \.self) {
+                        Text($0)
+                    }
+                }
+                .pickerStyle(SegmentedPickerStyle())
+            }
+            
+            // Date Picker
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Scheduled Date")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.secondary)
+                
+                DatePicker("Pick a date", selection: $selectedDate, displayedComponents: .date)
+                    .datePickerStyle(GraphicalDatePickerStyle())
+                    .padding()
+                    .background(Color.cardBackground)
+                    .cornerRadius(12)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
+                    .accentColor(Color.primaryGreen)
+            }
+        }
+    }
+    
+    private var saveButton: some View {
+        Button(action: saveVaccination) {
+            Text("Schedule Vaccination")
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(vaccineName.isEmpty ? Color.gray.opacity(0.5) : Color.primaryGreen)
+                .cornerRadius(16)
+                .shadow(color: Color.primaryGreen.opacity(0.3), radius: 10, x: 0, y: 5)
+        }
+        .disabled(vaccineName.isEmpty || isLoading)
+    }
+    
+    private func saveVaccination() {
+        isLoading = true
+        
+        let formatter = ISO8601DateFormatter()
+        let dateString = formatter.string(from: selectedDate)
+        
+        let newVax = VaccinationCreate(vaccine_name: vaccineName, type: vaccineType, planned_date: dateString)
+        
+        AuthManager.shared.addVaccination(vaccine: newVax) { result in
+            isLoading = false
+            switch result {
+            case .success:
+                path.removeLast()
+            case .failure(let error):
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

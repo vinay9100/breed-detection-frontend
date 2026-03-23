@@ -4,6 +4,10 @@ struct MilkYieldAnalysisView: View {
     @Binding var path: [AppRoute]
     @State private var appeared = false
     
+    var prediction: PredictResponse? {
+        AuthManager.shared.currentPrediction
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             navigationBar
@@ -31,14 +35,20 @@ struct MilkYieldAnalysisView: View {
     private var navigationBar: some View {
         HStack {
             Button(action: {
-                _ = path.removeLast()
+                if !path.isEmpty {
+                    _ = path.removeLast()
+                }
             }) {
                 Image(systemName: "arrow.left")
-                    .font(.title3)
+                    .font(.title3.bold())
                     .foregroundColor(.primary)
+                    .padding(12)
+                    .background(Color.cardBackground)
+                    .clipShape(Circle())
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             Text("Milk Yield Analysis")
-                .font(.headline)
+                .font(.system(size: 20, weight: .bold))
                 .padding(.leading, 10)
             Spacer()
         }
@@ -59,9 +69,9 @@ struct MilkYieldAnalysisView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("22-28 L/day")
+                    Text(prediction?.milk_yield_range ?? "12-15 L/day")
                         .font(.title.bold())
-                    Text("Average daily yield")
+                    Text("Average daily yield range")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -69,17 +79,17 @@ struct MilkYieldAnalysisView: View {
             }
             
             VStack(spacing: 18) {
-                YieldStatRow(label: "Peak Lactation", value: "30-40 L/day")
+                YieldStatRow(label: "Estimated Yield", value: "\(String(format: "%.1f", prediction?.yield_estimate ?? 0)) L/day")
                 Divider()
-                YieldStatRow(label: "Annual Production", value: "8,000-10,000 L")
+                YieldStatRow(label: "Fat Content", value: prediction?.fat_content ?? "4.5%")
                 Divider()
-                YieldStatRow(label: "Lactation Period", value: "305 days")
+                YieldStatRow(label: "Breed Standard", value: prediction?.breed_name ?? "General Cattle")
             }
         }
         .padding(25)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(25)
-        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
     }
     
     private var yieldFactorsCard: some View {
@@ -100,9 +110,9 @@ struct MilkYieldAnalysisView: View {
         }
         .padding(25)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(25)
-        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
     }
     
     private var seasonalVariationCard: some View {

@@ -5,9 +5,12 @@ struct BPAAnimalDetailView: View {
     let animal: AnimalRegistrationData
     @State private var appeared = false
     
+    @State private var detectionHistory: [RecentActivity] = []
+    @State private var isLoadingHistory = false
+    
     var body: some View {
         ZStack {
-            Color(red: 248/255, green: 251/255, blue: 249/255).ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 headerSection
@@ -28,8 +31,19 @@ struct BPAAnimalDetailView: View {
             }
         }
         .onAppear {
+            loadHistory()
             withAnimation(.easeOut(duration: 0.6)) {
                 appeared = true
+            }
+        }
+    }
+    
+    private func loadHistory() {
+        isLoadingHistory = true
+        AuthManager.shared.fetchAnimalHistory(earTag: animal.ear_tag_number) { result in
+            isLoadingHistory = false
+            if case .success(let data) = result {
+                self.detectionHistory = data
             }
         }
     }
@@ -78,15 +92,35 @@ struct BPAAnimalDetailView: View {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(Color.gray.opacity(0.1))
                         .frame(width: 100, height: 100)
-                    Image(systemName: "pawprint.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(Color(red: 0, green: 200/255, blue: 83/255))
+                    
+                    if let path = animal.last_image_path, let url = URL(string: "\(AuthManager.shared.baseURL)/\(path)") {
+                        AsyncImage(url: url) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 100, height: 100)
+                                .clipShape(RoundedRectangle(cornerRadius: 20))
+                        } placeholder: {
+                            ProgressView()
+                                .frame(width: 100, height: 100)
+                        }
+                    } else {
+                        Image(systemName: "pawprint.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(Color(red: 0, green: 200/255, blue: 83/255))
+                    }
                 }
                 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(animal.breed)
+                    Text(animal.animal_name ?? animal.breed)
                         .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(Color(red: 27/255, green: 94/255, blue: 32/255))
+                        .foregroundColor(.primary)
+                    
+                    if animal.animal_name != nil {
+                        Text(animal.breed)
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
                     
                     HStack(spacing: 8) {
                         Text(animal.ear_tag_number)
@@ -117,9 +151,9 @@ struct BPAAnimalDetailView: View {
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
     }
@@ -131,7 +165,7 @@ struct BPAAnimalDetailView: View {
                     .foregroundColor(.blue)
                 Text("Owner Information")
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(Color(red: 27/255, green: 94/255, blue: 32/255))
+                    .foregroundColor(.primary)
                 Spacer()
             }
             
@@ -162,9 +196,9 @@ struct BPAAnimalDetailView: View {
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(.spring().delay(0.1), value: appeared)
@@ -177,18 +211,47 @@ struct BPAAnimalDetailView: View {
                     .foregroundColor(.purple)
                 Text("Breed Detection History")
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(Color(red: 27/255, green: 94/255, blue: 32/255))
+                    .foregroundColor(.primary)
+                
                 Spacer()
             }
             
             VStack(spacing: 0) {
-                TimelineItem(date: "Recent Registration", title: "Official BPA Record", subtitle: "Registered by BPA Officer", icon: "sparkles", color: .purple, isFirst: true, isLast: true)
+                if isLoadingHistory {
+                    ProgressView()
+                        .padding()
+                } else if detectionHistory.isEmpty {
+                    TimelineItem(date: "Registration", title: "Official BPA Record", subtitle: "Registered by BPA Officer", icon: "sparkles", color: .purple, isFirst: true, isLast: true)
+                } else {
+                    ForEach(Array(detectionHistory.enumerated()), id: \.element.id) { index, det in
+                        TimelineItem(
+                            date: det.time,
+                            title: det.title,
+                            subtitle: det.subtitle,
+                            icon: "waveform.path.ecg",
+                            color: .green,
+                            isFirst: index == 0,
+                            isLast: index == detectionHistory.count - 1
+                        )
+                    }
+                    
+                    // Always show the base registration at the bottom if we have history
+                    TimelineItem(
+                        date: "Registration",
+                        title: "Official BPA Record",
+                        subtitle: "Registration process completed",
+                        icon: "checkmark.seal",
+                        color: .purple,
+                        isFirst: false,
+                        isLast: true
+                    )
+                }
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(.spring().delay(0.2), value: appeared)
@@ -206,7 +269,7 @@ struct ProfileStat: View {
                 .foregroundColor(.secondary)
             Text(value)
                 .font(.system(size: 14, weight: .bold))
-                .foregroundColor(Color(red: 27/255, green: 94/255, blue: 32/255))
+                .foregroundColor(.primary)
         }
     }
 }
@@ -259,7 +322,7 @@ struct TimelineItem: View {
                 
                 Text(title)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(Color(red: 27/255, green: 94/255, blue: 32/255))
+                    .foregroundColor(.primary)
                 
                 Text(subtitle)
                     .font(.system(size: 13))
@@ -277,6 +340,7 @@ struct TimelineItem: View {
         path: .constant([]),
         animal: AnimalRegistrationData(
             ear_tag_number: "ET-2024-8472",
+            animal_name: "Gauri",
             species: "Cattle",
             sex: "Female",
             breed: "Holstein Friesian",
@@ -285,7 +349,8 @@ struct TimelineItem: View {
             address: "Main Street, Sector 12",
             village: "Karnal",
             district: "Karnal",
-            state: "Haryana"
+            state: "Haryana",
+            last_image_path: nil
         )
     )
 }

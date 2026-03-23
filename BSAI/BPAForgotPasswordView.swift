@@ -4,10 +4,13 @@ struct BPAForgotPasswordView: View {
     @Binding var path: [AppRoute]
     @State private var email = ""
     @State private var appeared = false
+    @State private var isSending = false
+    @State private var emailError = ""
+    @State private var showToast = false
     
     var body: some View {
         ZStack {
-            Color(hex: "F8FBF9").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 navigationHeader
@@ -19,7 +22,7 @@ struct BPAForgotPasswordView: View {
                         VStack(spacing: 8) {
                             Text("Forgot Password")
                                 .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(Color(hex: "1B5E20"))
+                                .foregroundColor(.primary)
                             Text("Enter your email to reset your password")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
@@ -27,10 +30,17 @@ struct BPAForgotPasswordView: View {
                         
                         inputField(label: "Official Email Address", icon: "envelope", placeholder: "officer@bpa.gov", text: $email)
                         
-                        Text("We'll send a verification code to this email address")
+                        Text("We'll send a verification code to this email address\nRemember to prefix with BPA- (e.g. BPA-officer@gmail.com)")
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                        if !emailError.isEmpty {
+                            Text(emailError)
+                                .font(.system(size: 11))
+                                .foregroundColor(.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                         
                         sendButton
                         
@@ -97,9 +107,11 @@ struct BPAForgotPasswordView: View {
                 
                 TextField(placeholder, text: text)
                     .font(.system(size: 16))
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
             }
             .padding()
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -110,11 +122,30 @@ struct BPAForgotPasswordView: View {
     
     private var sendButton: some View {
         Button(action: {
-            path.append(.bpaOTPVerification(identifier: email))
+            guard !email.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+            
+            withAnimation {
+                isSending = true
+                emailError = ""
+            }
+            
+            AuthManager.shared.bpaForgotPassword(email: email) { result in
+                withAnimation { isSending = false }
+                switch result {
+                case .success(_):
+                    path.append(.bpaOTPVerification(identifier: email, isPasswordReset: true))
+                case .failure(let error):
+                    withAnimation { emailError = error.localizedDescription }
+                }
+            }
         }) {
             HStack(spacing: 10) {
-                Image(systemName: "paperplane.fill")
-                Text("Send Reset Code")
+                if isSending {
+                    ProgressView().tint(.white)
+                } else {
+                    Image(systemName: "paperplane.fill")
+                    Text("Send Reset Code")
+                }
             }
             .font(.headline)
             .foregroundColor(.white)
@@ -125,6 +156,7 @@ struct BPAForgotPasswordView: View {
             .shadow(color: Color(hex: "008D43").opacity(0.3), radius: 10, x: 0, y: 5)
         }
         .buttonStyle(PressScaleButtonStyle())
+        .disabled(isSending)
     }
     
     private var loginLink: some View {

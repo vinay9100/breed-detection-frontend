@@ -6,7 +6,7 @@ struct RoleSelectionView: View {
 
     var body: some View {
         ZStack {
-            Color(hex: "F9FBF9").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
             // Background branding element
             VStack {
@@ -38,7 +38,7 @@ struct RoleSelectionView: View {
                     Button("Support Center") {
                         path.append(.helpSupport)
                     }
-                    .foregroundColor(Color(hex: "00A661"))
+                    .foregroundColor(.primary)
                     .fontWeight(.bold)
                 }
                 .font(.system(size: 14))
@@ -66,22 +66,25 @@ struct RoleSelectionView: View {
         VStack(spacing: 20) {
             ZStack {
                 Circle()
-                    .fill(Color(hex: "00A661").opacity(0.03))
+                    .fill(Color.accentColor.opacity(0.03))
                     .frame(width: 130, height: 130)
                 
                 Circle()
-                    .stroke(Color(hex: "00A661").opacity(0.1), lineWidth: 1)
+                    .stroke(Color.accentColor.opacity(0.1), lineWidth: 1)
                     .frame(width: 110, height: 110)
                 
                 ZStack {
                     Circle()
-                        .fill(LinearGradient(colors: [Color(hex: "00A661"), Color(hex: "008D43")], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(LinearGradient(colors: [Color.accentColor, Color(hex: "008D43")], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 80, height: 80)
-                        .shadow(color: Color(hex: "00A661").opacity(0.3), radius: 15, x: 0, y: 8)
+                        .shadow(color: Color.accentColor.opacity(0.3), radius: 15, x: 0, y: 8)
                     
-                    Image(systemName: "leaf.fill")
-                        .font(.system(size: 34, weight: .bold))
+                    Image("AppLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 58, height: 58)
                         .foregroundColor(.white)
+                        .clipShape(Circle())
                 }
             }
             .scaleEffect(appeared ? 1 : 0.4)
@@ -91,7 +94,7 @@ struct RoleSelectionView: View {
             VStack(spacing: 8) {
                 Text("Select Access Mode")
                     .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(Color(hex: "1B5E20"))
+                    .foregroundColor(.primary)
                 
                 Text("Choose your gateway to the\nBreedSure AI Ecosystem")
                     .font(.system(size: 17, weight: .medium))
@@ -111,7 +114,7 @@ struct RoleSelectionView: View {
                 icon: "tractor.fill",
                 title: "Farmer / Owner",
                 subtitle: "Manage inventory, yields, and analytics",
-                color: Color(hex: "00A661"),
+                color: .accentColor,
                 delay: 0.5
             ) {
                 path.append(.login)
@@ -124,7 +127,7 @@ struct RoleSelectionView: View {
                 icon: "shield.checkered",
                 title: "BPA Officer",
                 subtitle: "Official registration and verifications",
-                color: Color.blue,
+                color: .blue,
                 delay: 0.6
             ) {
                 path.append(.login)
@@ -185,7 +188,7 @@ struct RoleCard: View {
             .padding(18)
             .background(
                 RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .fill(Color.white)
+                    .fill(Color.cardBackground)
                     .shadow(color: Color.black.opacity(0.03), radius: 20, x: 0, y: 15)
             )
             .overlay(

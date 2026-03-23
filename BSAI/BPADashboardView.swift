@@ -15,7 +15,7 @@ struct BPADashboardView: View {
     
     var body: some View {
         ZStack {
-            Color(hex: "F8FBF9").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 dashboardHeader
@@ -64,8 +64,8 @@ struct BPADashboardView: View {
                 .padding(.vertical, 12)
                 .background(
                     Capsule()
-                        .fill(Color.white)
-                        .shadow(color: Color.black.opacity(0.08), radius: 15, x: 0, y: 5)
+                        .fill(Color.cardBackground)
+                        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 5)
                 )
                 .padding(.horizontal, 24)
                 .padding(.bottom, 20) // Margin from standard safe area bottom edge
@@ -121,18 +121,22 @@ struct BPADashboardView: View {
                 HStack(alignment: .top) {
                     
                     VStack(alignment: .leading, spacing: 4) {
+                        let officerName = AuthManager.shared.currentUser?.fullName.split(separator: " ").first.map(String.init) ?? "Officer"
+                        let greeting = GreetingHelper.getGreeting(for: officerName)
                         
-                        // First Line
-                        Text("Good Evening, Officer 👋")
+                        Text("\(greeting)👋")
                             .font(.system(size: 22, weight: .bold, design: .rounded))
                             .foregroundColor(.white)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                         
-                        // Second Line (Name Below)
-                        Text(AuthManager.shared.currentUser?.fullName ?? "Officer")
+                        Text("Officer")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.white.opacity(0.9))
+                        
+                        Text("BPA Dashboard")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundColor(.white.opacity(0.8))
                     }
                     
                     Spacer()
@@ -152,11 +156,6 @@ struct BPADashboardView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 5)
                 
-                // Left aligned title
-                Text("BPA Dashboard")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white.opacity(0.85))
-                    .padding(.horizontal, 24)
             }
             .padding(.bottom, 25)
             .background(
@@ -186,18 +185,20 @@ struct BPADashboardView: View {
     }
     
     private var statsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+        VStack(spacing: 16) {
             BPAStatCard(icon: "pawprint.fill", iconColor: .green, value: "\(stats?.total_animals ?? 0)", title: "Total Animals Registered", trend: "Real-time sync", delay: 0.1, appeared: appeared) {
-                path.append(.bpaReports) // Navigate to animal records
+                path.append(.bpaReports)
             }
-            BPAStatCard(icon: "person.2.fill", iconColor: .blue, value: "\(stats?.total_owners ?? 0)", title: "Total Owners", trend: "Direct registration", delay: 0.2, appeared: appeared) {
-                path.append(.bpaAnalytics) // Navigate to owner analytics
-            }
-            BPAStatCard(icon: "checkmark.seal.fill", iconColor: .orange, value: "\(stats?.pending_verifications ?? 0)", title: "Pending Verifications", trend: "Up to date", delay: 0.3, appeared: appeared) {
-                path.append(.bpaSearch) // Navigate to verification/search
-            }
-            BPAStatCard(icon: "rays", iconColor: .purple, value: "\(stats?.ai_detections ?? 0)", title: "AI Detections Today", trend: "Global stats", delay: 0.4, appeared: appeared) {
-                path.append(.bpaReports) // Navigate to detection results/reports
+            .frame(maxWidth: .infinity)
+            
+            HStack(spacing: 16) {
+                BPAStatCard(icon: "person.2.fill", iconColor: .blue, value: "\(stats?.total_owners ?? 0)", title: "Total Owners", trend: "Direct registration", delay: 0.2, appeared: appeared) {
+                    path.append(.bpaAnalytics)
+                }
+                
+                BPAStatCard(icon: "rays", iconColor: .purple, value: "\(stats?.ai_detections ?? 0)", title: "AI Detections Today", trend: "Global stats", delay: 0.3, appeared: appeared) {
+                    path.append(.bpaReports)
+                }
             }
         }
         .padding(.horizontal, 24)
@@ -207,7 +208,7 @@ struct BPADashboardView: View {
         VStack(alignment: .leading, spacing: 18) {
             Text("Quick Actions")
                 .font(.system(size: 18, weight: .bold))
-                .foregroundColor(Color(hex: "1B5E20"))
+                .foregroundColor(.primary)
                 .padding(.horizontal, 24)
             
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
@@ -240,7 +241,7 @@ struct BPADashboardView: View {
         VStack(alignment: .leading, spacing: 18) {
             Text("Recent Activity")
                 .font(.system(size: 18, weight: .bold))
-                .foregroundColor(Color(hex: "1B5E20"))
+                .foregroundColor(.primary)
                 .padding(.horizontal, 24)
             
             VStack(spacing: 1) {
@@ -259,9 +260,9 @@ struct BPADashboardView: View {
                     }
                 }
             }
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(24)
-            .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+            .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
             .padding(.horizontal, 24)
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 20)
@@ -336,7 +337,7 @@ struct BPAStatCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(value)
                         .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundColor(Color(hex: "1B2E20"))
+                        .foregroundColor(.primary)
                     Text(title)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.secondary)
@@ -351,9 +352,9 @@ struct BPAStatCard: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(24)
-            .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+            .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         }
         .buttonStyle(EnhancedRoleButtonStyle()) // Uses the scaling/haptic style
         .opacity(appeared ? 1 : 0)
@@ -383,14 +384,14 @@ struct BPAActionButton: View {
                 
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(hex: "1B2E20"))
+                    .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 24)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(24)
-            .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+            .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
         }
         .buttonStyle(EnhancedRoleButtonStyle())
     }
@@ -421,7 +422,7 @@ struct ActivityRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(Color(hex: "1B5E20"))
+                        .foregroundColor(.primary)
                     Text(subtitle)
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)

@@ -4,6 +4,17 @@ struct EconomicPotentialView: View {
     @Binding var path: [AppRoute]
     @State private var appeared = false
     
+    var prediction: PredictResponse? {
+        AuthManager.shared.currentPrediction
+    }
+    
+    var breedInfo: BreedInfo? {
+        if let breedName = prediction?.breed_name {
+            return BreedRepository.getBreed(named: breedName)
+        }
+        return nil
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             navigationBar
@@ -20,7 +31,7 @@ struct EconomicPotentialView: View {
                 .padding()
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
             appeared = true
         }
@@ -31,15 +42,17 @@ struct EconomicPotentialView: View {
     private var navigationBar: some View {
         HStack {
             Button(action: {
-                _ = path.removeLast()
+                if !path.isEmpty {
+                    _ = path.removeLast()
+                }
             }) {
                 Image(systemName: "arrow.left")
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             Text("Economic Potential")
                 .font(.system(size: 20, weight: .bold))
@@ -51,7 +64,10 @@ struct EconomicPotentialView: View {
     }
     
     private var heroCard: some View {
-        VStack(spacing: 20) {
+        let revenue = (prediction?.yield_estimate ?? 0) * 30 * 45 // 30 days, 45 per liter (demo)
+        let cost = (breedInfo?.feedCost == "High") ? 650 : ((breedInfo?.feedCost == "Medium") ? 450 : 300)
+        
+        return VStack(spacing: 20) {
             HStack(spacing: 15) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 15)
@@ -63,7 +79,7 @@ struct EconomicPotentialView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("High ROI")
+                    Text(breedInfo?.productivity == "Excellent" ? "High ROI" : "Optimal ROI")
                         .font(.title2.bold())
                     Text("Return on Investment")
                         .font(.subheadline)
@@ -73,11 +89,11 @@ struct EconomicPotentialView: View {
             }
             
             VStack(spacing: 10) {
-                Text("$1,200 - $1,500")
+                Text("₹\(Int(revenue - Double(cost))) - ₹\(Int(revenue))")
                     .font(.system(size: 34, weight: .black))
                     .foregroundColor(.primary)
                 
-                Text("Estimated monthly revenue per animal")
+                Text("Estimated monthly potental for \(prediction?.breed_name ?? "this breed")")
                     .font(.subheadline)
                     .foregroundColor(.green)
                     .padding(.horizontal, 16)
@@ -91,9 +107,9 @@ struct EconomicPotentialView: View {
             .cornerRadius(20)
         }
         .padding(25)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .scaleEffect(appeared ? 1 : 0.9)
         .opacity(appeared ? 1 : 0)
         .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.1), value: appeared)
@@ -123,9 +139,9 @@ struct EconomicPotentialView: View {
             }
         }
         .padding(25)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(25)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: appeared)
@@ -186,9 +202,9 @@ struct EconomicStatCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(22)
-        .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
     }
 }
 

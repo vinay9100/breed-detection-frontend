@@ -3,17 +3,21 @@ import SwiftUI
 struct BPAOTPVerificationView: View {
     @Binding var path: [AppRoute]
     let identifier: String
+    var isPasswordReset: Bool = false
     @State private var otpDigits = Array(repeating: "", count: 6)
     @FocusState private var focusedField: Int?
     @State private var timeRemaining = 30
     @State private var canResend = false
     @State private var appeared = false
+    @State private var isValidating = false
+    @State private var isSuccess = false
+    @State private var errorMessage = ""
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     var body: some View {
         ZStack {
-            Color(hex: "F8FBF9").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 navigationHeader
@@ -25,7 +29,7 @@ struct BPAOTPVerificationView: View {
                         VStack(spacing: 8) {
                             Text("Verify Code")
                                 .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(Color(hex: "1B5E20"))
+                                .foregroundColor(.primary)
                             Text("Enter the 6-digit code sent to")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
@@ -35,6 +39,14 @@ struct BPAOTPVerificationView: View {
                         }
                         
                         otpInputSection
+                        
+                        
+                        if !errorMessage.isEmpty {
+                            Text(errorMessage)
+                                .font(.system(size: 14))
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                        }
                         
                         timerSection
                         
@@ -116,8 +128,16 @@ struct BPAOTPVerificationView: View {
                     .foregroundColor(.secondary)
             } else {
                 Button(action: {
-                    timeRemaining = 30
                     canResend = false
+                    errorMessage = ""
+                    let realEmail = identifier.uppercased().hasPrefix("BPA-") ? 
+                        identifier.replacingOccurrences(of: "BPA-", with: "") : identifier
+                    AuthManager.shared.sendOTP(email: realEmail) { result in
+                        switch result {
+                        case .success(_): timeRemaining = 30
+                        case .failure(let error): errorMessage = error.localizedDescription
+                        }
+                    }
                 }) {
                     Text("Resend Verification Code")
                         .font(.system(size: 14, weight: .bold))
@@ -136,18 +156,57 @@ struct BPAOTPVerificationView: View {
     
     private var verifyButton: some View {
         Button(action: {
-            path.append(.bpaResetPassword)
+            let otpString = otpDigits.joined()
+            guard otpString.count == 6 else { return }
+            
+            withAnimation {
+                isValidating = true
+                errorMessage = ""
+            }
+            
+            let realEmail = identifier.uppercased().hasPrefix("BPA-") ?
+                identifier.replacingOccurrences(of: "BPA-", with: "") : identifier
+                
+            AuthManager.shared.verifyOTP(email: realEmail, otp: otpString) { result in
+                withAnimation { isValidating = false }
+                
+                switch result {
+                case .success(let token):
+                    withAnimation { isSuccess = true }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        if isPasswordReset {
+                            path.append(.bpaResetPassword(token: token))
+                        } else {
+                            path = []
+                        }
+                    }
+                case .failure(let error):
+                    withAnimation {
+                        errorMessage = error.localizedDescription
+                        otpDigits = Array(repeating: "", count: 6)
+                        focusedField = 0
+                    }
+                }
+            }
         }) {
-            Text("Verify & Continue")
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 18)
-                .background(Color(hex: "008D43"))
-                .cornerRadius(14)
-                .shadow(color: Color(hex: "008D43").opacity(0.3), radius: 10, x: 0, y: 5)
+            ZStack {
+                if isValidating {
+                    ProgressView().tint(.white)
+                } else if isSuccess {
+                    Image(systemName: "checkmark.circle.fill").font(.title2)
+                } else {
+                    Text("Verify & Continue").font(.headline)
+                }
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(Color(hex: "008D43"))
+            .cornerRadius(14)
+            .shadow(color: Color(hex: "008D43").opacity(0.3), radius: 10, x: 0, y: 5)
         }
         .buttonStyle(PressScaleButtonStyle())
+        .disabled(isValidating || isSuccess)
         .padding(.top, 20)
     }
 }
@@ -160,13 +219,13 @@ struct OTPDigitField: View {
     
     var body: some View {
         TextField("", text: $text)
+            .keyboardType(.numberPad)
+            .multilineTextAlignment(.center)
             .frame(width: 48, height: 60)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .font(.system(size: 24, weight: .bold))
             .foregroundColor(Color(hex: "00C853"))
             .cornerRadius(14)
-            .multilineTextAlignment(.center)
-            .keyboardType(.numberPad)
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(isFocused ? Color(hex: "00C853") : Color.gray.opacity(0.15), lineWidth: 2)
@@ -186,5 +245,5 @@ struct OTPDigitField: View {
 }
 
 #Preview {
-    BPAOTPVerificationView(path: .constant([]), identifier: "officer@bpa.gov")
+    BPAOTPVerificationView(path: .constant([]), identifier: "officer@bpa.gov", isPasswordReset: false)
 }

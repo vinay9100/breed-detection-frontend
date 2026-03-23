@@ -1,9 +1,12 @@
 import SwiftUI
+import PhotosUI
 
 struct BPACameraView: View {
     @Binding var path: [AppRoute]
+    let earTag: String?
     @State private var appeared = false
     @State private var isFlashOn = false
+    @State private var selectedItem: PhotosPickerItem? = nil
     
     var body: some View {
         ZStack {
@@ -66,14 +69,17 @@ struct BPACameraView: View {
                         .cornerRadius(20)
                     
                     HStack(spacing: 60) {
-                        Button(action: {}) {
+                        PhotosPicker(selection: $selectedItem, matching: .images) {
                             Image(systemName: "photo.on.rectangle")
                                 .font(.title)
                                 .foregroundColor(.white)
                         }
                         
                         Button(action: {
-                            path.append(.bpaAIProcessing)
+                            // In simulation, we'll use a placeholder for now
+                            // but in a real app, this would be a camera capture
+                            AuthManager.shared.pendingImage = UIImage(named: "cow_temp_1")
+                            path.append(.bpaAIProcessing(earTag: earTag))
                         }) {
                             ZStack {
                                 Circle()
@@ -95,6 +101,24 @@ struct BPACameraView: View {
                 }
             }
         }
+        .onChange(of: selectedItem) { newItem in
+            Task {
+                if let data = try? await newItem?.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    // Resize immediately to prevent memory crashes
+                    let resized = image.size.width > 1024 || image.size.height > 1024 ? 
+                        image.resized(to: CGSize(width: 1024, height: 1024)) ?? image : image
+                        
+                    await MainActor.run {
+                        AuthManager.shared.pendingImage = resized
+                        path.append(.bpaAIProcessing(earTag: earTag))
+                    }
+                }
+            }
+        }
+        .onAppear {
+            selectedItem = nil
+        }
     }
     
     private func cornerMark(rotation: Double) -> some View {
@@ -108,5 +132,5 @@ struct BPACameraView: View {
 }
 
 #Preview {
-    BPACameraView(path: .constant([]))
+    BPACameraView(path: .constant([]), earTag: nil)
 }

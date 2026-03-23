@@ -1,13 +1,26 @@
 import SwiftUI
+import PhotosUI
 
 struct EditProfileView: View {
     @Binding var path: [AppRoute]
+    @ObservedObject private var localization = LocalizationManager.shared
+    @ObservedObject private var authManager = AuthManager.shared
     @State private var appeared = false
     
-    @State private var fullName = "John Farmer"
-    @State private var email = "john.farmer@email.com"
-    @State private var phoneNumber = "+1 234 567 8900"
-    @State private var location = "California, USA"
+    @State private var fullName = ""
+    @State private var email = ""
+    @State private var phoneNumber = ""
+    @State private var location = "India"
+    
+    @State private var selectedItem: PhotosPickerItem?
+    @State private var profileImage: Image?
+    @State private var selectedUIImage: UIImage?
+    @State private var isLoading = false
+    @State private var showSuccessAlert = false
+    @State private var showErrorAlert = false
+    @State private var errorMessage = ""
+    
+    private var imageBaseURL: String { AuthManager.shared.baseURL }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -18,10 +31,10 @@ struct EditProfileView: View {
                     profileImageSection
                     
                     VStack(spacing: 20) {
-                        EditInfoField(label: "Full Name", icon: "person", text: $fullName)
-                        EditInfoField(label: "Email", icon: "envelope", text: $email)
-                        EditInfoField(label: "Phone Number", icon: "phone", text: $phoneNumber)
-                        EditInfoField(label: "Location", icon: "mappin.circle", text: $location)
+                        EditInfoField(label: LocalizationManager.shared.t("edit_profile_name"), icon: "person", text: $fullName)
+                        EditInfoField(label: LocalizationManager.shared.t("edit_profile_email"), icon: "envelope", text: $email)
+                        EditInfoField(label: LocalizationManager.shared.t("edit_profile_phone"), icon: "phone", text: $phoneNumber)
+                        EditInfoField(label: LocalizationManager.shared.t("edit_profile_location"), icon: "mappin.circle", text: $location)
                     }
                     .padding(.horizontal, 24)
                     
@@ -32,9 +45,51 @@ struct EditProfileView: View {
                 .padding(.top, 20)
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
+        .overlay {
+            if isLoading {
+                ZStack {
+                    Color.black.opacity(0.3).ignoresSafeArea()
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.4)
+                        Text("Saving changes...")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                    .padding(30)
+                    .background(Color.black.opacity(0.7))
+                    .cornerRadius(16)
+                }
+            }
+        }
+        .alert("Profile Updated!", isPresented: $showSuccessAlert) {
+            Button("OK") { path.removeLast() }
+        } message: {
+            Text("Your profile has been successfully updated.")
+        }
+        .alert("Update Failed", isPresented: $showErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
+        }
         .onAppear {
+            if !appeared {
+                fullName = AuthManager.shared.currentUser?.fullName ?? ""
+                email = AuthManager.shared.currentUser?.email ?? ""
+                phoneNumber = AuthManager.shared.currentUser?.phoneNumber ?? ""
+            }
             appeared = true
+        }
+        .onChange(of: selectedItem) { newItem in
+            Task {
+                if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                    if let uiImage = UIImage(data: data) {
+                        selectedUIImage = uiImage
+                        profileImage = Image(uiImage: uiImage)
+                    }
+                }
+            }
         }
     }
     
@@ -49,12 +104,12 @@ struct EditProfileView: View {
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             
-            Text("Edit Profile")
+            Text(LocalizationManager.shared.t("edit_profile_title"))
                 .font(.system(size: 20, weight: .bold))
                 .padding(.leading, 10)
             
@@ -66,28 +121,51 @@ struct EditProfileView: View {
     
     private var profileImageSection: some View {
         VStack(spacing: 15) {
-            ZStack(alignment: .bottomTrailing) {
-                Circle()
-                    .fill(Color(hex: "00C853"))
-                    .frame(width: 120, height: 120)
-                
-                Image(systemName: "person.fill")
-                    .font(.system(size: 60))
-                    .foregroundColor(.white)
-                
-                Button(action: {}) {
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(.primary)
-                        .padding(8)
-                        .background(Color.white)
-                        .clipShape(Circle())
-                        .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+            PhotosPicker(selection: $selectedItem, matching: .images) {
+                ZStack(alignment: .bottomTrailing) {
+                    if let profileImage = profileImage {
+                        profileImage
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 120, height: 120)
+                            .clipShape(Circle())
+                    } else if let photoPath = AuthManager.shared.currentUser?.profilePhoto {
+                        AsyncImage(url: URL(string: "\(imageBaseURL)/\(photoPath)")) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 120, height: 120)
+                                .clipShape(Circle())
+                        } placeholder: {
+                            Circle()
+                                .fill(Color(hex: "00C853"))
+                                .frame(width: 120, height: 120)
+                            ProgressView()
+                        }
+                    } else {
+                        Circle()
+                            .fill(Color(hex: "00C853"))
+                            .frame(width: 120, height: 120)
+                        
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(.white)
+                    }
+                    
+                    ZStack {
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 32, height: 32)
+                            .shadow(radius: 4)
+                        
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.primary)
+                    }
                 }
-                .padding(2)
             }
             
-            Text("Tap to change photo")
+            Text(LocalizationManager.shared.t("edit_profile_tap_photo"))
                 .font(.system(size: 14))
                 .foregroundColor(.secondary)
         }
@@ -97,8 +175,23 @@ struct EditProfileView: View {
     }
     
     private var saveButton: some View {
-        Button(action: { path.removeLast() }) {
-            Text("Save Changes")
+        Button(action: { 
+            isLoading = true
+            if let image = selectedUIImage {
+                AuthManager.shared.uploadProfilePhoto(image: image) { result in
+                    switch result {
+                    case .success(let photoURL):
+                        updateProfile(photoURL: photoURL)
+                    case .failure(let error):
+                        print("Upload failed: \(error.localizedDescription)")
+                        isLoading = false
+                    }
+                }
+            } else {
+                updateProfile(photoURL: nil)
+            }
+        }) {
+            Text(LocalizationManager.shared.t("edit_profile_save"))
                 .font(.headline)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
@@ -112,6 +205,27 @@ struct EditProfileView: View {
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.4), value: appeared)
+    }
+    
+    private func updateProfile(photoURL: String?) {
+        AuthManager.shared.updateProfile(fullName: fullName, phoneNumber: phoneNumber, profilePhoto: photoURL) { result in
+            switch result {
+            case .success:
+                // Refresh user data from server to ensure local state is in sync
+                AuthManager.shared.fetchMe { _ in
+                    DispatchQueue.main.async {
+                        isLoading = false
+                        showSuccessAlert = true
+                    }
+                }
+            case .failure(let error):
+                DispatchQueue.main.async {
+                    isLoading = false
+                    errorMessage = error.localizedDescription
+                    showErrorAlert = true
+                }
+            }
+        }
     }
 }
 
@@ -134,11 +248,11 @@ struct EditInfoField: View {
             TextField(label, text: $text)
                 .font(.system(size: 16, weight: .medium))
                 .padding()
-                .background(Color.gray.opacity(0.04))
+                .background(Color.cardBackground)
                 .cornerRadius(14)
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+                        .stroke(Color.shadowColor, lineWidth: 1)
                 )
         }
     }

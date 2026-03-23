@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ScanHistoryView: View {
     @Binding var path: [AppRoute]
+    @ObservedObject private var localization = LocalizationManager.shared
     @State private var appeared = false
     
     @State private var scans: [DetectionRecord] = []
@@ -22,7 +23,7 @@ struct ScanHistoryView: View {
                 .padding(.horizontal, 24)
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .onAppear {
             loadScans()
             withAnimation {
@@ -52,12 +53,12 @@ struct ScanHistoryView: View {
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color(.systemBackground))
                     .clipShape(Circle())
                     .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
             }
             
-            Text("Scan History")
+            Text(LocalizationManager.shared.t("scan_history_title"))
                 .font(.system(size: 20, weight: .bold))
                 .padding(.leading, 10)
             
@@ -70,16 +71,16 @@ struct ScanHistoryView: View {
     private var headerSection: some View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Recent Scans")
+                Text(LocalizationManager.shared.t("scan_history_recent"))
                     .font(.system(size: 20, weight: .bold))
-                Text("\(scans.count) total scans")
+                Text("\(scans.count) \(LocalizationManager.shared.t("scan_history_total"))")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
             
             Spacer()
             
-            Button("View Analytics") {
+            Button(LocalizationManager.shared.t("scan_history_analytics")) {
                 path.append(.analyticsHub)
             }
             .font(.system(size: 14, weight: .bold))
@@ -95,6 +96,17 @@ struct ScanHistoryView: View {
         VStack(spacing: 16) {
             ForEach(Array(scans.enumerated()), id: \.offset) { index, scan in
                 Button(action: {
+                    // Convert DetectionRecord to PredictResponse to view it
+                    AuthManager.shared.currentPrediction = PredictResponse(
+                        breed_name: scan.breed_name,
+                        confidence_score: scan.confidence_score,
+                        yield_estimate: scan.yield_estimate,
+                        milk_yield_range: scan.milk_yield_range,
+                        animal_type: scan.animal_type,
+                        fat_content: scan.fat_content,
+                        image_url: scan.image_path,
+                        message: nil
+                    )
                     withAnimation(.spring()) {
                         path.append(.detectionResult)
                     }
@@ -159,32 +171,55 @@ struct ScanHistoryCard: View {
                     .foregroundColor(.secondary)
             }
             
-            HStack(spacing: 40) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Confidence")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
-                    Text("\(Int(scan.confidence_score))%")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.green)
+            HStack(spacing: 15) {
+                if let imagePath = scan.image_path, let url = URL(string: "http://127.0.0.1:8000/\(imagePath)") {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .empty:
+                            Color.gray.opacity(0.1)
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 60, height: 60)
+                                .clipped()
+                        case .failure(_):
+                            Color.gray.opacity(0.1)
+                        @unknown default:
+                            Color.gray.opacity(0.1)
+                        }
+                    }
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                        Text("Yield")
+
+                HStack(spacing: 40) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Confidence")
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
+                        Text("\(Int(scan.confidence_score))%")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.green)
                     }
-                    Text("\(String(format: "%.1f", scan.yield_estimate ?? 0.0)) L/day")
-                        .font(.system(size: 16, weight: .bold))
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chart.line.uptrend.xyaxis")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                            Text("Yield")
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        }
+                        Text("\(String(format: "%.1f", scan.yield_estimate ?? 0.0)) L/day")
+                            .font(.system(size: 16, weight: .bold))
+                    }
                 }
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(25)
         .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 5)
     }

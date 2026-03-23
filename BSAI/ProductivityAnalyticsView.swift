@@ -22,7 +22,7 @@ struct ProductivityAnalyticsView: View {
                 .padding(.horizontal, 24)
             }
         }
-        .background(Color(hex: "F8FBF9").ignoresSafeArea())
+        .background(Color.appBackground.ignoresSafeArea())
         .onAppear {
             loadData()
             withAnimation(.easeOut(duration: 0.5)) {
@@ -52,9 +52,9 @@ struct ProductivityAnalyticsView: View {
                     .font(.title3.bold())
                     .foregroundColor(.primary)
                     .padding(12)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             
             Text("Productivity Analytics")
@@ -103,7 +103,7 @@ struct ProductivityAnalyticsView: View {
                 .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.blue.opacity(0.1), lineWidth: 1))
                 
                 VStack(spacing: 8) {
-                    Text(String(format: "%.0f%%", (summary?.average_accuracy ?? 0) * 100))
+                    Text(String(format: "%.0f%%", min(summary?.average_accuracy ?? 0, 100.0)))
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(.green)
                     Text("Efficiency Score")
@@ -118,9 +118,9 @@ struct ProductivityAnalyticsView: View {
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .padding(.top, 20)
         .opacity(appeared ? 1 : 0)
         .scaleEffect(appeared ? 1 : 0.95)
@@ -133,16 +133,16 @@ struct ProductivityAnalyticsView: View {
                 .font(.system(size: 18, weight: .bold))
             
             VStack(spacing: 20) {
-                MetricProgressRow(label: "Milk Production", value: String(format: "%.0f%%", (summary?.average_accuracy ?? 0) * 100), color: .blue)
-                MetricProgressRow(label: "Health Status", value: String(format: "%.0f%%", (summary?.average_accuracy ?? 0) * 105 > 100 ? 100 : (summary?.average_accuracy ?? 0) * 105), color: .green)
-                MetricProgressRow(label: "Feed Efficiency", value: String(format: "%.0f%%", (summary?.average_accuracy ?? 0) * 95), color: .teal)
-                MetricProgressRow(label: "Economic Value", value: String(format: "%.0f%%", (summary?.average_accuracy ?? 0) * 102 > 100 ? 100 : (summary?.average_accuracy ?? 0) * 102), color: .purple)
+                MetricProgressRow(label: "Milk Production", value: String(format: "%.0f%%", min(summary?.average_accuracy ?? 0, 100.0)), color: .blue)
+                MetricProgressRow(label: "Health Status", value: String(format: "%.0f%%", min((summary?.average_accuracy ?? 0) * 1.05, 100.0)), color: .green)
+                MetricProgressRow(label: "Feed Efficiency", value: String(format: "%.0f%%", min((summary?.average_accuracy ?? 0) * 0.95, 100.0)), color: .teal)
+                MetricProgressRow(label: "Economic Value", value: String(format: "%.0f%%", min((summary?.average_accuracy ?? 0) * 1.02, 100.0)), color: .purple)
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(30)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: appeared)
@@ -165,9 +165,9 @@ struct ProductivityAnalyticsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(20)
-            .shadow(color: Color.black.opacity(0.02), radius: 10, x: 0, y: 5)
+            .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
             
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 6) {
@@ -184,9 +184,9 @@ struct ProductivityAnalyticsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
-            .background(Color.white)
+            .background(Color.cardBackground)
             .cornerRadius(20)
-            .shadow(color: Color.black.opacity(0.02), radius: 10, x: 0, y: 5)
+            .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
@@ -201,16 +201,16 @@ struct ProductivityAnalyticsView: View {
                     .foregroundColor(.blue)
                 Text("Growth Opportunity")
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(Color(hex: "1A237E"))
+                    .foregroundColor(.primary)
             }
             
             VStack(alignment: .leading, spacing: 8) {
                 Text("Improve feed quality to reach target yield of 18 L/day")
                     .font(.system(size: 15))
-                    .foregroundColor(Color(hex: "283593"))
+                    .foregroundColor(.secondary)
                 Text("Potential revenue increase: +$250/month")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(Color(hex: "3F51B5"))
+                    .foregroundColor(.secondary)
             }
         }
         .padding(25)

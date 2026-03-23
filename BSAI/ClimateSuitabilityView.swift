@@ -4,6 +4,17 @@ struct ClimateSuitabilityView: View {
     @Binding var path: [AppRoute]
     @State private var appeared = false
     
+    var prediction: PredictResponse? {
+        AuthManager.shared.currentPrediction
+    }
+    
+    var breedInfo: BreedInfo? {
+        if let breedName = prediction?.breed_name {
+            return BreedRepository.getBreed(named: breedName)
+        }
+        return nil
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             navigationBar
@@ -30,14 +41,20 @@ struct ClimateSuitabilityView: View {
     private var navigationBar: some View {
         HStack {
             Button(action: {
-                _ = path.removeLast()
+                if !path.isEmpty {
+                    _ = path.removeLast()
+                }
             }) {
                 Image(systemName: "arrow.left")
-                    .font(.title3)
+                    .font(.title3.bold())
                     .foregroundColor(.primary)
+                    .padding(12)
+                    .background(Color.cardBackground)
+                    .clipShape(Circle())
+                    .shadow(color: Color.shadowColor, radius: 5, x: 0, y: 2)
             }
             Text("Climate Suitability")
-                .font(.headline)
+                .font(.system(size: 20, weight: .bold))
                 .padding(.leading, 10)
             Spacer()
         }
@@ -60,10 +77,10 @@ struct ClimateSuitabilityView: View {
                         .cornerRadius(12)
                     
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Moderate Climate Breed")
+                        Text("\(breedInfo?.climateTolerance ?? "Optimal") Tolerance")
                             .font(.headline)
                             .foregroundColor(.orange)
-                        Text("Best suited for temperate climates with cool temperatures")
+                        Text("Optimized for \(prediction?.breed_name ?? "this breed") in \(breedInfo?.climate ?? "temperate") conditions")
                             .font(.caption)
                             .foregroundColor(.orange.opacity(0.8))
                     }
@@ -82,9 +99,9 @@ struct ClimateSuitabilityView: View {
             }
         }
         .padding(25)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(25)
-        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
     }
     
     private var climateManagementCard: some View {
@@ -105,9 +122,9 @@ struct ClimateSuitabilityView: View {
         }
         .padding(25)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(25)
-        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.shadowColor, radius: 10, x: 0, y: 5)
     }
 }
 

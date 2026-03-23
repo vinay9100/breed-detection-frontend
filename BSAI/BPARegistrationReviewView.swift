@@ -9,7 +9,7 @@ struct BPARegistrationReviewView: View {
     
     var body: some View {
         ZStack {
-            Color(hex: "F8FBF9").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
             
             VStack(spacing: 0) {
                 headerSection
@@ -18,6 +18,7 @@ struct BPARegistrationReviewView: View {
                     VStack(spacing: 25) {
                         reviewSection(title: "Animal Information", icon: "pawprint.fill", iconColor: Color(hex: "00C853"), items: [
                             ("Ear Tag Number", registrationData.ear_tag_number),
+                            ("Animal Name", registrationData.animal_name ?? "Not provided"),
                             ("Species", registrationData.species),
                             ("Sex", registrationData.sex),
                             ("Breed", registrationData.breed),
@@ -115,7 +116,7 @@ struct BPARegistrationReviewView: View {
                 }
                 Text(title)
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(Color(hex: "1B5E20"))
+                    .foregroundColor(.primary)
                 
                 Spacer()
                 
@@ -136,7 +137,7 @@ struct BPARegistrationReviewView: View {
                         
                         Text(items[index].1)
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(Color(hex: "1B5E20"))
+                            .foregroundColor(.primary)
                         
                         Spacer()
                     }
@@ -152,9 +153,9 @@ struct BPARegistrationReviewView: View {
             .cornerRadius(16)
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1), value: appeared)
@@ -219,7 +220,7 @@ struct BPARegistrationReviewView: View {
                     .foregroundColor(Color(hex: "1B5E20"))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 18)
-                    .background(Color.white)
+                    .background(Color.cardBackground)
                     .cornerRadius(14)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
@@ -276,6 +277,7 @@ struct BPARegistrationReviewView: View {
         path: .constant([]),
         registrationData: AnimalRegistrationData(
             ear_tag_number: "ET-2024-8472",
+            animal_name: "Gauri",
             species: "Cattle",
             sex: "Female",
             breed: "Holstein Friesian",
@@ -284,7 +286,8 @@ struct BPARegistrationReviewView: View {
             address: "Main Street, Sector 12",
             village: "Karnal",
             district: "Karnal",
-            state: "Haryana"
+            state: "Haryana",
+            last_image_path: nil
         )
     )
 }

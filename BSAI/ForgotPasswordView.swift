@@ -114,20 +114,20 @@ struct ForgotPasswordView: View {
                 withAnimation { emailError = "Please use a valid @gmail.com address" }
                 return
             }
-            
             withAnimation { isSending = true }
             
-            // Simulate API Call
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                withAnimation(.spring()) { 
-                    isSending = false
-                    showToast = true
-                }
-                
-                // Hide toast and navigate
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    withAnimation { showToast = false }
-                    path.append(.otpVerification(identifier: identifier))
+            AuthManager.shared.forgotPassword(email: identifier) { result in
+                withAnimation { isSending = false }
+                switch result {
+                case .success(let msg):
+                    withAnimation { showToast = true }
+                    // Hide toast and navigate instantly
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        withAnimation { showToast = false }
+                        path.append(.otpVerification(identifier: identifier, isPasswordReset: true))
+                    }
+                case .failure(let error):
+                    withAnimation { emailError = error.localizedDescription }
                 }
             }
         } label: {

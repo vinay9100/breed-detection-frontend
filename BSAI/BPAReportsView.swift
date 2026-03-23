@@ -16,7 +16,7 @@ struct BPAReportsView: View {
 
     var body: some View {
         ZStack {
-            Color(hex: "F8FBF9").ignoresSafeArea()
+            Color.appBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 reportsHeader
@@ -139,9 +139,9 @@ struct BPAReportsView: View {
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1), value: appeared)
@@ -257,9 +257,9 @@ struct BPAReportsView: View {
             }
         }
         .padding(24)
-        .background(Color.white)
+        .background(Color.cardBackground)
         .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 10)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(Animation.spring(response: 0.6, dampingFraction: 0.8).delay(0.5), value: appeared)
@@ -397,7 +397,7 @@ struct ReportActionButton: View {
 struct TableCard<Content: View>: View {
     var title: String
     var icon: String
-    var titleColor: Color = .black
+    var titleColor: Color = .primary
     @ViewBuilder var content: () -> Content
     
     var body: some View {
@@ -417,9 +417,9 @@ struct TableCard<Content: View>: View {
             content()
         }
         .padding(20)
-        .background(Color.white)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
+        .background(Color.cardBackground)
+        .cornerRadius(24)
+        .shadow(color: Color.shadowColor, radius: 15, x: 0, y: 10)
     }
 }
 
@@ -472,7 +472,7 @@ struct TableRow: View {
                 ForEach(0..<data.count, id: \.self) { index in
                     Text(data[index])
                         .font(.system(size: 13))
-                        .foregroundColor(index == 0 ? .blue : .black)
+                        .foregroundColor(index == 0 ? .blue : .primary)
                         .lineLimit(index == 0 ? 1 : 2)
                         .minimumScaleFactor(0.7)
                         .frame(maxWidth: .infinity, alignment: index == 0 ? .leading : (index == data.count - 1 ? .trailing : .center))
