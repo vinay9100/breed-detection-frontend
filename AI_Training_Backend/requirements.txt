@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+ultralytics
+torch
+pillow
+python-multipart
+python-dotenv
+open_clip_torch

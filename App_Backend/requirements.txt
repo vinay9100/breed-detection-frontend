@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+sqlalchemy
+pymysql
+passlib[bcrypt]
+PyJWT
+pydantic[email]
+python-dotenv
+fastapi-mail
+python-multipart
+httpx
+ultralytics
+opencv-python-headless
+Pillow
+open_clip_torch
