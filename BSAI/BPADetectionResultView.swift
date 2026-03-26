@@ -306,6 +306,7 @@ struct BPADetectionResultView: View {
                     ) { saveResult in
                         switch saveResult {
                         case .success:
+                            AuthManager.shared.confirmedPrediction = result // Store confirmed result for registration
                             AuthManager.shared.currentPrediction = nil
                             AuthManager.shared.pendingImage = nil
                             // Redirect back to registration form to continue

@@ -17,8 +17,12 @@ api.interceptors.request.use((config) => {
 export const authApi = {
     login: (data: any) => api.post('/login', data),
     register: (data: any) => api.post('/register', data),
+    bpaRegister: (data: any) => api.post('/bpa-register', data),
     verifyOtp: (data: any) => api.post('/verify-otp', data),
-    resendOtp: (data: any) => api.post('/resend-otp', data),
+    resendOtp: (identifier: string) => api.post('/resend-otp', { email: identifier }),
+    forgotPassword: (data: any) => api.post('/forgot-password', data),
+    bpaForgotPassword: (data: any) => api.post('/bpa-forgot-password', data),
+    resetPassword: (data: any) => api.post('/reset-password', data),
 };
 
 export const farmerApi = {
@@ -36,7 +40,9 @@ export const farmerApi = {
     getNotifications: () => api.get('/notifications'),
     markNotificationRead: (id: number) => api.put(`/notifications/${id}/read`),
     getVaccinations: () => api.get('/vaccinations'),
+    addVaccination: (data: any) => api.post('/vaccinations', data),
     completeVaccination: (id: number) => api.put(`/vaccinations/${id}/complete`),
+    deleteVaccination: (id: number) => api.delete(`/vaccinations/${id}`),
     getAlerts: () => api.get('/alerts'),
     getSeasonalReminders: () => api.get('/seasonal-reminders'),
     getTimetable: () => api.get('/timetable'),

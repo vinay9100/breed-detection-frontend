@@ -102,22 +102,30 @@ struct BPAAnimalRegistrationView: View {
                 appeared = true
             }
         }
-        .onChange(of: authManager.currentPrediction) { newPrediction in
-            if let prediction = newPrediction, prediction.message == nil {
-                // Auto-fill from AI scan results
+        .onChange(of: authManager.confirmedPrediction) { _, confirmed in
+            if let prediction = confirmed, prediction.message == nil {
+                // REQUIRED: Auto-fill from AI scan results AFTER user confirms
                 if let detectedBreed = prediction.breed_name {
+                    print("✅ Applying confirmed breed: \(detectedBreed)")
                     breed = detectedBreed
-                    // REQUIREMENT: Populate animal name if breed is detected (e.g. Toda)
+                    
+                    // Also auto-suggest as animal name if empty/generic
                     if animalName.isEmpty || animalName == "Toda" {
                         animalName = detectedBreed
                     }
                 }
+                
                 if let type = prediction.animal_type {
                     if type.lowercased() == "cow" {
                         species = "Cattle"
                     } else {
                         species = type
                     }
+                }
+                
+                // Clear the confirmation so we don't re-apply it unnecessarily
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    authManager.confirmedPrediction = nil
                 }
             }
         }

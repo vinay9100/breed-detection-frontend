@@ -140,27 +140,33 @@ struct AIProcessingView: View {
         guard !processingStarted else { return }
         processingStarted = true
         
-        // Simulating milestones
+        // Simulating milestones (Scaled to ~20 seconds total)
         let milestones: [(Double, Double, Int)] = [
-            (0.5, 0.25, 0),
-            (1.5, 0.50, 1),
-            (2.5, 0.75, 2),
-            (3.5, 0.90, 3)
+            (4.0, 0.25, 0),
+            (7.5, 0.50, 1),
+            (11.0, 0.75, 2),
+            (14.0, 0.95, 3)
         ]
         
         for m in milestones {
             DispatchQueue.main.asyncAfter(deadline: .now() + m.0) {
-                withAnimation {
+                withAnimation(.easeInOut(duration: 2.0)) {
                     self.progress = m.1
                     self.currentStepIndex = m.2
                 }
             }
         }
         
+        let startTime = Date()
+        
         // Actually upload if we have a pending image
         if let image = AuthManager.shared.pendingImage {
             AuthManager.shared.uploadImageForPrediction(image: image) { result in
-                DispatchQueue.main.async {
+                let elapsedTime = Date().timeIntervalSince(startTime)
+                let minimumWait: Double = 15.1 // Approximately 15 seconds
+                let remainingWait = max(0, minimumWait - elapsedTime)
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + remainingWait) {
                     switch result {
                     case .success(let prediction):
                         AuthManager.shared.currentPrediction = prediction
@@ -168,17 +174,19 @@ struct AIProcessingView: View {
                         if let msg = prediction.message {
                             // REJECTION CASE
                             self.rejectionMessage = msg
-                            // Small delay for hierarchy stability
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                 if self.appeared {
                                     self.showRejectionAlert = true
                                 }
                             }
                         } else {
-                            // SUCCESS CASE - wait for progress to complete or jump
-                            withAnimation { self.progress = 1.0; self.currentStepIndex = 4 }
+                            // SUCCESS CASE
+                            withAnimation(.easeOut(duration: 1.0)) { 
+                                self.progress = 1.0
+                                self.currentStepIndex = 4 
+                            }
                             
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                                 withAnimation { path.append(.detectionResult) }
                             }
                         }
@@ -186,7 +194,6 @@ struct AIProcessingView: View {
                     case .failure(let error):
                         print("AI Error: \(error.localizedDescription)")
                         self.rejectionMessage = "Could not reach the AI analyzer. Please check your connection."
-                        // Small delay for hierarchy stability
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             if self.appeared {
                                 self.showRejectionAlert = true
@@ -196,20 +203,20 @@ struct AIProcessingView: View {
                 }
             }
         } else {
-            // No image found? Just simulate and go
-            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+            // No image found? Simulate extended delay then go
+            DispatchQueue.main.asyncAfter(deadline: .now() + 19.5) {
                 finishProcessing()
             }
         }
     }
     
     func finishProcessing() {
-        withAnimation {
+        withAnimation(.easeOut(duration: 1.0)) {
             progress = 1.0
             currentStepIndex = steps.count
         }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             path.append(.detectionResult)
         }
     }

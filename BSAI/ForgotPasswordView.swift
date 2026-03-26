@@ -119,7 +119,7 @@ struct ForgotPasswordView: View {
             AuthManager.shared.forgotPassword(email: identifier) { result in
                 withAnimation { isSending = false }
                 switch result {
-                case .success(let msg):
+                case .success:
                     withAnimation { showToast = true }
                     // Hide toast and navigate instantly
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {

@@ -137,7 +137,7 @@ struct BPAAnalyticsView: View {
                 appeared = true
             }
         }
-        .onChange(of: timeFilter) { _ in
+        .onChange(of: timeFilter) {
             fetchData()
         }
     }

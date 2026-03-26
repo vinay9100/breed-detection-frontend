@@ -622,7 +622,7 @@ def get_recent_activity(db: Session = Depends(get_db), current_user: models.User
             id=f"scan_{det.id}",
             title="AI Scan Complete", 
             subtitle=f"{det.breed_name} ({int(det.confidence_score)}%)", 
-            time=det.detected_at.strftime("%H:%M %p"), 
+            time=det.detected_at.isoformat(), 
             type="scan",
             breed_name=det.breed_name,
             confidence_score=det.confidence_score,
@@ -631,7 +631,6 @@ def get_recent_activity(db: Session = Depends(get_db), current_user: models.User
         ))
     
     # If BPA, also show recent registrations (all, or just their own?)
-    # Existing logic showed all, but filtering by officer is better for dashboard
     if current_user.role == "bpa":
         latest_regs = db.query(models.RegisteredAnimal)\
             .filter(models.RegisteredAnimal.bpa_id == current_user.id)\
@@ -643,7 +642,7 @@ def get_recent_activity(db: Session = Depends(get_db), current_user: models.User
                 id=f"reg_{reg.id}",
                 title="Animal Registered", 
                 subtitle=f"{reg.breed} - {reg.owner_name}", 
-                time=reg.registered_at.strftime("%H:%M %p"), 
+                time=reg.registered_at.isoformat(), 
                 type="registration"
             ))
             

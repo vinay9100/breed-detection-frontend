@@ -28,6 +28,7 @@ class AuthManager: ObservableObject {
     @Published var currentUser: User?
     @Published var pendingImage: UIImage?
     @Published var currentPrediction: PredictResponse?
+    @Published var confirmedPrediction: PredictResponse? // For capturing user-confirmed results
     @Published var authToken: String? {
         didSet {
             // Save token to UserDefaults
@@ -1183,7 +1184,7 @@ struct VaccinationCreate: Codable {
     let vaccine_name: String
     let type: String?
     let planned_date: String
-    let animal_id: Int? = nil
+    var animal_id: Int?
 }
 
 // MARK: - Analytics Models

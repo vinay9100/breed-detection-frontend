@@ -8,8 +8,6 @@ struct CameraView: View {
     
     // Image Upload State
     @State private var selectedItem: PhotosPickerItem? = nil
-    @State private var isUploading = false
-    @State private var uploadError: String? = nil
     @State private var showRejectionAlert = false
     @State private var rejectionMessage: String = ""
     
@@ -153,14 +151,18 @@ struct CameraView: View {
         .onAppear {
             appeared = true
         }
-        .onChange(of: selectedItem) { newItem in
+        .onChange(of: selectedItem) { _, newItem in
             Task {
                 if let data = try? await newItem?.loadTransferable(type: Data.self),
                    let image = UIImage(data: data) {
                     // Resize immediately to prevent memory crashes
                     let resized = image.size.width > 1024 || image.size.height > 1024 ? 
                         image.resized(to: CGSize(width: 1024, height: 1024)) ?? image : image
-                    uploadImage(resized)
+                    
+                    await MainActor.run {
+                        AuthManager.shared.pendingImage = resized
+                        path.append(.aiProcessing)
+                    }
                 }
             }
         }
@@ -168,21 +170,6 @@ struct CameraView: View {
             Button("Try Again", role: .cancel) { }
         } message: {
             Text(rejectionMessage)
-        }
-        .overlay {
-            if isUploading {
-                ZStack {
-                    Color.black.opacity(0.6).ignoresSafeArea()
-                    VStack(spacing: 20) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            .scaleEffect(1.5)
-                        Text("Analyzing Image...")
-                            .foregroundColor(.white)
-                            .font(.headline)
-                    }
-                }
-            }
         }
     }
     
@@ -195,23 +182,4 @@ struct CameraView: View {
         }
     }
 
-    private func uploadImage(_ image: UIImage) {
-        isUploading = true
-        AuthManager.shared.uploadImageForPrediction(image: image) { result in
-            isUploading = false
-            switch result {
-            case .success(let prediction):
-                AuthManager.shared.currentPrediction = prediction
-                if let message = prediction.message {
-                    // This is the "Not Cattle/Buffalo" rejection
-                    self.rejectionMessage = message
-                    self.showRejectionAlert = true
-                } else {
-                    path.append(.detectionResult)
-                }
-            case .failure(let error):
-                self.uploadError = error.localizedDescription
-            }
-        }
-    }
 }

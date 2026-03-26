@@ -407,6 +407,38 @@ struct ActivityRow: View {
     let time: String
     let isLast: Bool
     
+    private var formattedTime: String {
+        // Try parsing ISO8601 format from backend
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .iso8601)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0) // Backend sends UTC
+        
+        let formats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss"
+        ]
+        
+        var date: Date?
+        for format in formats {
+            formatter.dateFormat = format
+            if let d = formatter.date(from: time) {
+                date = d
+                break
+            }
+        }
+        
+        if let date = date {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "hh:mm a"
+            displayFormatter.timeZone = .current // Convert to local time
+            return displayFormatter.string(from: date)
+        }
+        
+        return time // Fallback
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 16) {
@@ -430,7 +462,7 @@ struct ActivityRow: View {
                 
                 Spacer()
                 
-                Text(time)
+                Text(formattedTime)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }

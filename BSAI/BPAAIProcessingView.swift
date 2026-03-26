@@ -124,25 +124,35 @@ struct BPAAIProcessingView: View {
         
         // REQUIRED FIX: Clear old prediction before starting
         AuthManager.shared.currentPrediction = nil
+        AuthManager.shared.confirmedPrediction = nil
         
         // REQUIRED FIX: Reset loading state and progress
         self.isProcessing = true
-        self.progress = 0.05 // Immediate feedback
+        self.progress = 0.02 // Subtle immediate feedback
         self.currentStepIndex = 0
         self.hasNavigated = false
         
         guard let uiImage = AuthManager.shared.pendingImage else {
+            print("❌ BPA AI: Missing pending image, aborting.")
+            self.errorMessage = "No image found for analysis."
+            self.showErrorAlert = true
             return
         }
         
         print("🧪 BPA AI: Starting Analysis for EarTag: \(earTag ?? "nil")")
-        // Start animation milestones
+        // Start animation milestones (Scaled to ~20 seconds total)
         animateProgress()
+        
+        let startTime = Date()
         
         // Trigger AI Call
         AuthManager.shared.uploadImageForPrediction(image: uiImage, earTag: earTag) { result in
-            DispatchQueue.main.async {
-                print("🧪 BPA AI: API Response Received")
+            let elapsedTime = Date().timeIntervalSince(startTime)
+            let minimumWait: Double = 15.1 // Approximately 15 seconds
+            let remainingWait = max(0, minimumWait - elapsedTime)
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + remainingWait) {
+                print("🧪 BPA AI: API Response Processing (after \(elapsedTime + remainingWait)s)")
                 self.isProcessing = false
                 guard !self.hasNavigated else { 
                     print("🧪 BPA AI: Already navigated, ignoring response")
@@ -159,7 +169,7 @@ struct BPAAIProcessingView: View {
                         self.errorMessage = msg
                         self.hasNavigated = true
                         
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             if self.viewDidAppear {
                                 self.showErrorAlert = true
                             }
@@ -169,17 +179,19 @@ struct BPAAIProcessingView: View {
                         print("🧪 BPA AI: High confidence result, navigating...")
                         
                         // Stop milestones and jump to 100%
-                        withAnimation(.easeOut(duration: 0.4)) {
+                        withAnimation(.easeOut(duration: 1.0)) {
                             self.progress = 1.0
                             self.currentStepIndex = self.steps.count
                         }
                         
                         // Navigate after brief pause to show 100%
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                             if !self.hasNavigated {
                                 self.hasNavigated = true
                                 print("🧪 BPA AI: Appending .bpaDetectionResult to path")
-                                self.path.append(.bpaDetectionResult(earTag: self.earTag))
+                                withAnimation {
+                                    self.path.append(.bpaDetectionResult(earTag: self.earTag))
+                                }
                             }
                         }
                     }
@@ -199,16 +211,17 @@ struct BPAAIProcessingView: View {
     }
     
     private func animateProgress() {
+        // Milestones spread across 18 seconds
         let milestones: [(Double, Int, Double)] = [
-            (0.4, 1, 0.33),
-            (1.0, 2, 0.66),
-            (2.0, 3, 0.90)
+            (3.5, 1, 0.35),
+            (7.5, 2, 0.70),
+            (14.0, 3, 0.96)
         ]
         
         for (delay, step, targetProgress) in milestones {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 guard !self.hasNavigated && self.analysisStarted else { return }
-                withAnimation(.easeInOut(duration: 0.8)) {
+                withAnimation(.easeInOut(duration: 2.0)) { // Slower transitions
                     self.progress = targetProgress
                     self.currentStepIndex = step
                 }

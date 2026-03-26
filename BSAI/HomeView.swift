@@ -53,7 +53,7 @@ struct HomeView: View {
                 appeared = true
             }
         }
-        .onChange(of: locationManager.location) { _ in
+        .onChange(of: locationManager.location) {
             fetchAlerts()
         }
     }
@@ -457,6 +457,37 @@ struct HomeActivityRow: View {
     @AppStorage("isDarkMode") private var isDarkMode: Bool = false
     let activity: RecentActivity
     
+    private var formattedTime: String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .iso8601)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        
+        let formats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss"
+        ]
+        
+        var date: Date?
+        for format in formats {
+            formatter.dateFormat = format
+            if let d = formatter.date(from: activity.time) {
+                date = d
+                break
+            }
+        }
+        
+        if let date = date {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "hh:mm a"
+            displayFormatter.timeZone = .current
+            return displayFormatter.string(from: date)
+        }
+        
+        return activity.time
+    }
+    
     var body: some View {
         HStack(spacing: 15) {
             ZStack {
@@ -479,7 +510,7 @@ struct HomeActivityRow: View {
             
             Spacer()
             
-            Text(activity.time)
+            Text(formattedTime)
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
         }
