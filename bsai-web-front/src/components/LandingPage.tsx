@@ -1,181 +1,226 @@
-import { Shield, Target, TrendingUp, ChevronRight, PlayCircle, Sun, Moon } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import cattleHero from '../assets/premium_cattle.png';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useScroll, useTransform, useInView, useMotionValue, animate } from 'framer-motion';
+import { ChevronRight, Activity, Zap, BarChart3, Binary, Network, Sun, Moon } from 'lucide-react';
 
 interface LandingPageProps {
     onGetStarted: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
-    const [isDarkMode, setIsDarkMode] = useState(true);
+const CountUp = ({ value, duration = 1.5 }: { value: number, duration?: number }) => {
+    const count = useMotionValue(0);
+    const rounded = useTransform(count, (latest) => Math.round(latest));
+    const ref = useRef(null);
+    const isInView = useInView(ref, { once: true });
 
     useEffect(() => {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'light') {
-            setIsDarkMode(false);
-            document.body.classList.add('light-mode');
+        if (isInView) {
+            animate(count, value, { duration });
         }
-    }, []);
+    }, [isInView, value, count, duration]);
+
+    return <motion.span ref={ref}>{rounded}</motion.span>;
+};
+
+const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
+    const { scrollYProgress } = useScroll();
+    const floatingY = useTransform(scrollYProgress, [0, 1], [0, -50]);
+    const [beforeAfterVal, setBeforeAfterVal] = useState(50);
+    const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('dark-mode'));
+    const [detections, setDetections] = useState([
+        { id: 1, breed: 'Murrah', conf: 98.4, time: '12:45' },
+        { id: 2, breed: 'Deoni', conf: 89.1, time: '12:40' },
+        { id: 3, breed: 'Kankrej', conf: 94.2, time: '12:35' }
+    ]);
 
     const toggleTheme = () => {
         const newMode = !isDarkMode;
         setIsDarkMode(newMode);
         if (newMode) {
-            document.body.classList.remove('light-mode');
+            document.body.classList.add('dark-mode');
             localStorage.setItem('theme', 'dark');
         } else {
-            document.body.classList.add('light-mode');
+            document.body.classList.remove('dark-mode');
             localStorage.setItem('theme', 'light');
         }
     };
 
+    // Live Ticker Effect
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setDetections(prev => [...prev.slice(1), {
+                id: Date.now(),
+                breed: ['Gir', 'Sahival', 'Jaffrabadi'][Math.floor(Math.random() * 3)],
+                conf: (85 + Math.random() * 14).toFixed(1) as any,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }]);
+        }, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
     return (
-        <div className="min-h-screen">
-            {/* Navigation */}
-            <nav className="glass" style={{ position: 'fixed', top: 0, width: '100%', zIndex: 100, padding: '1rem 0' }}>
+        <div className="min-h-screen" style={{ background: 'var(--background)', color: 'var(--text)' }}>
+            <nav
+                className="glass"
+                style={{ position: 'fixed', top: 0, width: '100%', zIndex: 1000, padding: '1rem 0', backdropFilter: 'blur(40px)', borderBottom: '1px solid var(--glass-border)' }}
+            >
                 <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div className="flex items-center gap-2">
-                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Shield size={24} color="white" />
+                    <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        className="flex items-center gap-2 cursor-pointer"
+                    >
+                        <div style={{ width: '45px', height: '45px', borderRadius: '14px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 30px rgba(0, 229, 255, 0.2)' }}>
+                            <Zap size={26} color="#00E5FF" className="animate-pulse" />
                         </div>
-                        <span className="font-outfit" style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.5px' }}>BSAI <span style={{ color: 'var(--primary)' }}>Vision</span></span>
-                    </div>
+                        <span className="font-outfit" style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-1px' }}>
+                            BreedSure<span className="gradient-text">AI</span>
+                        </span>
+                    </motion.div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                        <a href="#features" className="btn-outline" style={{ border: 'none', padding: '0.5rem', fontSize: '0.95rem', color: 'var(--text-dim)' }}>Features</a>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <button
-                                onClick={toggleTheme}
-                                className="glass"
-                                style={{
-                                    width: '42px',
-                                    height: '42px',
-                                    border: '1px solid var(--glass-border)',
-                                    borderRadius: '12px',
-                                    cursor: 'pointer',
-                                    color: 'var(--text)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    background: 'var(--glass-bg)',
-                                    backdropFilter: 'blur(10px)',
-                                    boxShadow: 'var(--card-shadow)',
-                                    padding: 0
-                                }}
-                                title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                                onMouseOver={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.borderColor = 'var(--secondary)';
-                                    e.currentTarget.style.boxShadow = '0 10px 20px -10px var(--secondary)';
-                                }}
-                                onMouseOut={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.borderColor = 'var(--glass-border)';
-                                    e.currentTarget.style.boxShadow = 'var(--card-shadow)';
-                                }}
+                        {['Database', 'BPA Portal', 'Live Feed'].map((link) => (
+                            <motion.a
+                                key={link}
+                                href={`#${link}`}
+                                whileHover={{ x: 3, color: 'var(--secondary)' }}
+                                style={{ textDecoration: 'none', color: 'var(--text-dim)', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'uppercase' }}
                             >
-                                {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-                            </button>
-                            <button
-                                onClick={onGetStarted}
-                                className="btn-premium"
-                                style={{
-                                    padding: '0.7rem 1.8rem',
-                                    borderRadius: '12px',
-                                    fontSize: '0.95rem',
-                                    letterSpacing: '0.5px'
-                                }}
-                            >
-                                Login
-                            </button>
-                        </div>
+                                {link === 'Live Feed' && (
+                                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                        <div style={{ position: 'absolute', width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%', opacity: 0.6 }} className="animate-pulse" />
+                                        <Network size={14} style={{ color: '#ef4444' }} />
+                                    </div>
+                                )}
+                                {link}
+                            </motion.a>
+                        ))}
+                        <button
+                            onClick={toggleTheme}
+                            className="glass"
+                            style={{ width: '38px', height: '38px', borderRadius: '12px', border: '1px solid var(--glass-border)', cursor: 'pointer', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--glass-bg)' }}
+                        >
+                            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                        </button>
+                        <button onClick={onGetStarted} className="btn-premium" style={{ borderRadius: '50px', background: 'var(--accent)', padding: '0.6rem 2rem', fontSize: '0.9rem', color: 'white' }}>
+                            Authorize AI
+                        </button>
                     </div>
                 </div>
             </nav>
 
-            {/* Hero Section */}
-            < section style={{ paddingTop: '10rem', paddingBottom: '6rem', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '40%', height: '40%', borderRadius: '50%', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%)', filter: 'blur(50px)' }}></div>
+            <section style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', paddingTop: '80px' }}>
+                <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+                    <img
+                        src="https://images.unsplash.com/photo-1596733430284-f7437764b1a9?auto=format&fit=crop&q=80&w=2000"
+                        alt="Murrah Buffalo Field"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.95 }}
+                    />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, var(--background) 5%, transparent 60%, rgba(26,26,26,0.5) 100%)' }}></div>
+                </div>
 
-                <div className="container">
-                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr)', gap: '4rem', alignItems: 'center' }}>
-                        <div className="animate-fade-in">
-                            <h1 style={{ fontSize: '4rem', lineHeight: 1.1, marginBottom: '1.5rem', fontWeight: 700 }}>
-                                Revolutionizing <br />
-                                <span className="gradient-text">Cattle Farming</span> <br />
-                                with AI Precision.
-                            </h1>
-                            <p style={{ fontSize: '1.15rem', color: 'var(--text-dim)', marginBottom: '2.5rem', maxWidth: '550px' }}>
-                                Identify breeds with 99% accuracy, track milk yields, and manage herd health using our state-of-the-art computer vision system.
-                            </p>
-                            <div className="flex gap-4">
-                                <button onClick={onGetStarted} className="btn-premium" style={{ fontSize: '1.1rem', gap: '0.5rem' }}>
-                                    Get Started <ChevronRight size={20} />
-                                </button>
-                            </div>
-                        </div>
+                <div className="container" style={{ position: 'relative', zIndex: 10 }}>
+                    <motion.div style={{ maxWidth: '800px', y: floatingY }} initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }}>
+                        <h1 className="font-outfit animate-glitch" style={{ fontSize: '6rem', lineHeight: 0.85, fontWeight: 950, marginBottom: '2.5rem', color: 'var(--text)', letterSpacing: '-3px' }}>
+                            BreedSure<span className="gradient-text">AI</span>
+                        </h1>
+                        <p style={{ fontSize: '1.4rem', color: 'var(--text-dim)', marginBottom: '3.5rem', maxWidth: '550px', lineHeight: 1.5 }}>
+                            AI Vision Layer for Agricultural Precision. Detect genomic integrity with neural-link accuracy.
+                        </p>
+                        <button onClick={onGetStarted} className="btn-premium" style={{ padding: '1.2rem 3rem', fontSize: '1.2rem', gap: '1rem', background: 'var(--accent)', color: 'white' }}>
+                            Initiate Forensic Scan <ChevronRight size={24} />
+                        </button>
+                    </motion.div>
+                </div>
 
-                        <div className="animate-fade-in delay-200" style={{ position: 'relative' }}>
-                            <div className="glass-card" style={{ padding: '0.5rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                                <div style={{ width: '100%', maxWidth: '500px', aspectRatio: '1', position: 'relative', borderRadius: '1.5rem', overflow: 'hidden' }}>
-                                    <img src={cattleHero} alt="AI Scanning Cattle" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 0%, rgba(10, 15, 30, 0.4) 100%)' }}></div>
-
-                                    {/* Digital Scanning Overlay */}
-                                    <div className="animate-scan" style={{ position: 'absolute', width: '100%', height: '3px', background: 'var(--primary)', top: '10%', left: 0, boxShadow: '0 0 20px var(--primary)', zIndex: 10 }}></div>
-
-                                    <div className="glass" style={{ position: 'absolute', bottom: '1.5rem', left: '50%', transform: 'translateX(-50%)', padding: '0.75rem 1.5rem', borderRadius: '1rem', textAlign: 'center', width: '85%', backdropFilter: 'blur(12px)' }}>
-                                        <div className="flex items-center justify-center gap-2 mb-1">
-                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)', animation: 'pulse 1.5s infinite' }}></div>
-                                            <p className="font-outfit" style={{ fontSize: '0.75rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px' }}>Live AI Vision</p>
-                                        </div>
-                                        <p className="font-outfit" style={{ fontSize: '1.1rem', fontWeight: 600 }}>Breeding Info: Murrah buffalo (99.4%)</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <div style={{ position: 'absolute', bottom: '2rem', right: '2rem', width: '320px', background: 'var(--glass-bg)', backdropFilter: 'blur(30px)', border: '1px solid var(--glass-border)', borderRadius: '24px', padding: '1.5rem', zIndex: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--glass-border)' }}>
+                        <span style={{ color: 'var(--secondary)', fontSize: '0.75rem', fontWeight: 900 }}>HUB LOGS</span>
+                        <div style={{ width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%' }} className="animate-pulse" />
+                    </div>
+                    <div style={{ height: '120px', overflow: 'hidden', display: 'flex', flexDirection: 'column-reverse', gap: '0.75rem' }}>
+                        {detections.map((det) => (
+                            <motion.div key={det.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text)' }}>
+                                <span style={{ opacity: 0.7 }}>{det.breed} Unit</span>
+                                <span style={{ color: 'var(--secondary)', fontWeight: 800 }}>{det.conf}%</span>
+                            </motion.div>
+                        ))}
                     </div>
                 </div>
-            </section >
+            </section>
 
-            {/* Features Grid */}
-            < section id="features" style={{ padding: '6rem 0', background: 'rgba(0,0,0,0.2)' }}>
+            <div className="milk-divider" style={{ background: 'var(--accent)', height: '120px' }}>
+                <svg viewBox="0 0 1440 320" preserveAspectRatio="none" style={{ width: '100%', height: '100%' }}>
+                    <motion.path
+                        animate={{
+                            d: [
+                                "M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z",
+                                "M0,160L48,181.3C96,203,192,245,288,234.7C384,224,480,160,576,138.7C672,117,768,139,864,165.3C960,192,1056,224,1152,213.3C1248,203,1344,149,1392,122.7L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
+                            ]
+                        }}
+                        transition={{ repeat: Infinity, duration: 10, ease: 'easeInOut' }}
+                        fill="var(--background)"
+                    />
+                </svg>
+            </div>
+
+            <section style={{ padding: '8rem 0', background: 'var(--background)' }}>
                 <div className="container">
-                    <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                        <h2 className="font-outfit" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Smart Herd Intelligence</h2>
-                        <p style={{ color: 'var(--text-dim)', maxWidth: '600px', margin: '0 auto' }}>Leveraging advanced YOLO models to provide real-time livestock management and reporting.</p>
+                    <div style={{ textAlign: 'center', marginBottom: '6rem' }}>
+                        <h2 className="font-outfit" style={{ fontSize: '4rem', color: 'var(--text)', fontWeight: 900 }}>AI Genomic Intelligence</h2>
+                        <p style={{ color: 'var(--text-dim)', fontSize: '1.25rem' }}>High-Fidelity Veterinary Recognition Systems</p>
                     </div>
-
-                    <div className="stat-grid">
-                        {[
-                            { icon: Target, title: '99% Accuracy', desc: 'Industry-leading deep learning models for precise breed identification.', color: 'var(--primary)' },
-                            { icon: TrendingUp, title: 'Yield Analytics', desc: 'Predict milk yield and fat content based on breed metadata.', color: 'var(--secondary)' },
-                            { icon: Shield, title: 'BPA Verified', desc: 'Government-compliant reporting and historical tracking system.', color: '#f59e0b' }
-                        ].map((f, i) => (
-                            <div key={i} className="glass-card" style={{ textAlign: 'center' }}>
-                                <div style={{ width: '64px', height: '64px', borderRadius: '1rem', background: `rgba(${f.color === 'var(--primary)' ? '16, 185, 129' : '99, 102, 241'}, 0.1)`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: f.color }}>
-                                    <f.icon size={32} />
+                    <div className="stat-grid" style={{ gap: '3rem' }}>
+                        {[{ icon: Binary, title: 'Genetic ID Engine' }, { icon: Activity, title: 'Thermal HUD', color: 'var(--primary)' }, { icon: BarChart3, title: 'Pedigree Tree', dark: true }].map((item, i) => (
+                            <div key={i} className="glass-card" style={{ background: item.dark ? 'var(--accent)' : 'var(--glass-bg)', borderRadius: '32px', padding: '3rem', color: item.dark ? 'white' : 'var(--text)' }}>
+                                <div style={{ width: '80px', height: '80px', borderRadius: '20px', background: 'rgba(0, 229, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem', color: item.color || 'var(--secondary)' }}>
+                                    <item.icon size={40} />
                                 </div>
-                                <h3 style={{ marginBottom: '1rem' }}>{f.title}</h3>
-                                <p style={{ color: 'var(--text-dim)', fontSize: '0.95rem' }}>{f.desc}</p>
+                                <h3 style={{ fontSize: '2rem', marginBottom: '1rem', textAlign: 'center' }}>{item.title}</h3>
+                                <p style={{ color: item.dark ? 'rgba(255,255,255,0.6)' : 'var(--text-dim)', textAlign: 'center' }}>Forensic detection protocols for high-purity breed validation.</p>
                             </div>
                         ))}
                     </div>
                 </div>
-            </section >
+            </section>
 
-            {/* Footer */}
-            < footer style={{ padding: '4rem 0', borderTop: '1px solid var(--glass-border)' }}>
-                <div className="container flex justify-between items-center">
-                    <p style={{ color: 'var(--text-dim)' }}>© 2026 BSAI Infrastructure. Built for Precision.</p>
-                    <div className="flex gap-4">
-                        <a href="#" className="btn-outline" style={{ border: 'none', fontSize: '0.8rem' }}>Privacy Policy</a>
-                        <a href="#" className="btn-outline" style={{ border: 'none', fontSize: '0.8rem' }}>Terms of Service</a>
+            <section style={{ padding: '8rem 0', background: 'var(--accent)', color: 'white' }}>
+                <div className="container">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '6rem', alignItems: 'center' }}>
+                        <div>
+                            <h2 className="font-outfit" style={{ fontSize: '4rem', fontWeight: 900, marginBottom: '2rem' }}>Core AI <span className="gradient-text">Forensics</span></h2>
+                            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.2rem', marginBottom: '3rem' }}>Evaluating the Neural Hub processing layers.</p>
+                            <div style={{ display: 'flex', gap: '4rem' }}>
+                                <div><div style={{ fontSize: '4rem', fontWeight: 900, color: 'var(--secondary)' }}><CountUp value={99} />%</div><div style={{ fontSize: '0.8rem', opacity: 0.4 }}>Precision</div></div>
+                                <div><div style={{ fontSize: '4rem', fontWeight: 900, color: 'var(--primary)' }}><CountUp value={300} />ms</div><div style={{ fontSize: '0.8rem', opacity: 0.4 }}>Latency</div></div>
+                            </div>
+                        </div>
+                        <div className="glass-card" style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '32px', overflow: 'hidden' }}>
+                            <div style={{ position: 'relative', width: '100%', aspectRatio: '16/10', overflow: 'hidden', borderRadius: '26px' }}>
+                                <img src="https://images.unsplash.com/photo-1596733430284-f7437764b1a9?auto=format&fit=crop&q=80&w=1200" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Detected" />
+                                <div style={{ position: 'absolute', inset: 0, clipPath: `inset(0 ${100 - beforeAfterVal}% 0 0)`, zIndex: 5 }}>
+                                    <img src="https://images.unsplash.com/photo-1596733430284-f7437764b1a9?auto=format&fit=crop&q=80&w=1200" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(1) brightness(0.7)' }} alt="Raw" />
+                                </div>
+                                <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${beforeAfterVal}%`, width: '4px', background: 'var(--secondary)', zIndex: 10 }}>
+                                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '48px', height: '48px', background: 'var(--secondary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                                        <ChevronRight size={28} />
+                                    </div>
+                                </div>
+                                <input type="range" min="0" max="100" value={beforeAfterVal} onChange={(e) => setBeforeAfterVal(parseInt(e.target.value))} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'ew-resize', zIndex: 15 }} />
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </footer >
-        </div >
+            </section>
+
+            <footer style={{ padding: '6rem 0', background: 'var(--background)', borderTop: '1px solid var(--glass-border)' }}>
+                <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="flex items-center gap-2">
+                        <Zap size={24} color="var(--primary)" />
+                        <span className="font-outfit" style={{ fontSize: '1.5rem', fontWeight: 900 }}>BreedSureAI</span>
+                    </div>
+                    <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>© 2026 DISTRICT INFRASTRUCTURE. AI-POWERED GENETICS.</p>
+                </div>
+            </footer>
+        </div>
     );
 };
 

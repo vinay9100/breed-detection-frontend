@@ -9,6 +9,17 @@ type View = 'landing' | 'auth' | 'farmer_dashboard' | 'bpa_dashboard';
 function App() {
   const [view, setView] = useState<View>('landing');
 
+  useState(() => {
+    // Initial theme setup directly in render for immediate effect
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+    return undefined;
+  });
+
   const handleGetStarted = () => setView('auth');
   const handleBackToLanding = () => setView('landing');
 
