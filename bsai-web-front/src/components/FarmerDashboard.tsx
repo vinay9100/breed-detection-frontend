@@ -160,6 +160,77 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onLogout }) => {
         }
     };
 
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    const getYieldChartData = () => {
+        if (!analytics?.bar_chart || analytics.bar_chart.length === 0) {
+            return chartData;
+        }
+
+        const labels = analytics.bar_chart.map((d: any) => ({
+            date: d.date,
+            name: new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' })
+        }));
+
+        const categories = [...new Set(detections.filter(d => d.animal_ear_tag || d.breed_name).map(d => d.animal_ear_tag || d.breed_name))].slice(0, 3);
+
+        return labels.map((label: any) => {
+            const entry: any = { name: label.name };
+            categories.forEach(cat => {
+                // Precise day check: animal_ear_tag or breed matching, and date substring match
+                const dayDetections = detections.filter(d => {
+                    const dDate = d.detected_at.split('T')[0];
+                    return (d.animal_ear_tag === cat || (d.breed_name === cat && !d.animal_ear_tag)) && dDate === label.date;
+                });
+
+                if (dayDetections.length > 0) {
+                    entry[cat] = dayDetections[0].yield_estimate;
+                } else {
+                    entry[cat] = 0; // Explicitly set to 0 to prevent weird chart behavior
+                }
+            });
+            // Original yield from backend (Sum/Avg)
+            entry.yield = analytics.bar_chart.find((b: any) => b.date === label.date)?.avg_yield || 0;
+            return entry;
+        });
+    };
+
+    const exportToCSV = () => {
+        if (detections.length === 0) {
+            alert('No data to export');
+            return;
+        }
+
+        const headers = ["ID", "Ear Tag", "Breed", "Confidence", "Yield Estimate", "Fat Content", "Timestamp"];
+        const rows = detections.map(det => [
+            det.id,
+            det.animal_ear_tag || 'N/A',
+            det.breed_name,
+            `${Math.round(det.confidence_score)}%`,
+            det.yield_estimate || '0',
+            det.fat_content || 'N/A',
+            new Date(det.detected_at).toLocaleString()
+        ]);
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `breed_detection_history_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const yieldData = getYieldChartData();
+    const categories = detections.length > 0 ? [...new Set(detections.map(d => d.animal_ear_tag || d.breed_name))].slice(0, 3) : [];
+
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--background)' }}>
             <motion.aside
@@ -215,11 +286,16 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onLogout }) => {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => setShowNotifications(!showNotifications)}
-                            style={{ width: '45px', height: '45px', borderRadius: '12px', border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showNotifications ? 'var(--primary)' : 'var(--text-dim)', cursor: 'pointer' }}
+                            style={{ position: 'relative', width: '45px', height: '45px', borderRadius: '12px', border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showNotifications ? 'var(--primary)' : 'var(--text-dim)', cursor: 'pointer' }}
                         >
                             <Bell size={20} />
+                            {unreadCount > 0 && (
+                                <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', color: 'white', fontSize: '0.65rem', fontWeight: 800, width: '18px', height: '18px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--background)' }}>
+                                    {unreadCount}
+                                </span>
+                            )}
                         </motion.button>
-                        <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+                        <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} onUnreadChange={setUnreadCount} />
 
                         <div style={{ width: '45px', height: '45px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--secondary)' }}>
                             <img src={userProfile?.profile_photo ? `http://localhost:8000/${userProfile.profile_photo}?t=${Date.now()}` : `https://api.dicebear.com/7.x/avataaars/svg?seed=${userProfile?.full_name || 'Farmer'}`} alt="Profile" style={{ width: '100%', height: '100%' }} />
@@ -272,22 +348,56 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onLogout }) => {
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: '1.5rem' }}>
                                     <div className="glass-card" style={{ padding: '1.5rem', overflow: 'hidden' }}>
-                                        <h3 style={{ marginBottom: '1.5rem' }}>Yield Overview</h3>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                            <h3 style={{ margin: 0 }}>Yield Overview</h3>
+                                            <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                                                {categories.map((cat, i) => (
+                                                    <span key={cat} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                        <div style={{ width: '8px', height: '8px', background: i === 0 ? 'var(--primary)' : i === 1 ? 'var(--secondary)' : '#f59e0b', borderRadius: '50%' }} />
+                                                        {cat}
+                                                    </span>
+                                                ))}
+                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                    <div style={{ width: '8px', height: '8px', background: 'var(--text)', borderRadius: '50%', opacity: 0.5 }} />
+                                                    Cumulative Total
+                                                </span>
+                                            </div>
+                                        </div>
                                         <div style={{ width: '100%', height: '300px' }}>
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={chartData}>
+                                                <AreaChart data={yieldData}>
                                                     <defs>
-                                                        <linearGradient id="colorYield" x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor="var(--secondary)" stopOpacity={0.1} />
-                                                            <stop offset="95%" stopColor="var(--secondary)" stopOpacity={0} />
+                                                        <linearGradient id="colorCat0" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.4} />
+                                                            <stop offset="95%" stopColor="var(--primary)" stopOpacity={0.1} />
+                                                        </linearGradient>
+                                                        <linearGradient id="colorCat1" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="var(--secondary)" stopOpacity={0.4} />
+                                                            <stop offset="95%" stopColor="var(--secondary)" stopOpacity={0.1} />
+                                                        </linearGradient>
+                                                        <linearGradient id="colorCat2" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                                                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
                                                         </linearGradient>
                                                     </defs>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                                                     <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} />
                                                     <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} />
                                                     <Tooltip
-                                                        contentStyle={{ background: 'var(--background)', border: '1px solid var(--glass-border)', borderRadius: '8px' }}
+                                                        contentStyle={{ background: 'var(--background)', border: '1px solid var(--glass-border)', borderRadius: '12px' }}
                                                     />
-                                                    <Area type="monotone" dataKey="yield" stroke="var(--secondary)" fillOpacity={1} fill="url(#colorYield)" />
+                                                    {categories.map((cat, i) => (
+                                                        <Area
+                                                            key={cat}
+                                                            type="monotone"
+                                                            dataKey={cat}
+                                                            stackId="1"
+                                                            stroke={i === 0 ? 'var(--primary)' : i === 1 ? 'var(--secondary)' : '#f59e0b'}
+                                                            strokeWidth={2}
+                                                            fill={`url(#colorCat${i})`}
+                                                            name={cat}
+                                                        />
+                                                    ))}
                                                 </AreaChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -472,7 +582,11 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onLogout }) => {
                             <div className="animate-fade-in">
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                                     <h2 className="font-outfit" style={{ fontSize: '2rem' }}>Scan History</h2>
-                                    <button className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <button
+                                        onClick={exportToCSV}
+                                        className="btn-outline"
+                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                    >
                                         <Download size={16} /> Export CSV
                                     </button>
                                 </div>
@@ -548,13 +662,22 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onLogout }) => {
                                         <h3 style={{ marginBottom: '2rem' }}>Milk Production & Quality Trends</h3>
                                         <div style={{ width: '100%', height: '400px' }}>
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={chartData}>
+                                                <AreaChart data={yieldData}>
                                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                                                     <XAxis dataKey="name" stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} />
                                                     <YAxis stroke="var(--text-dim)" fontSize={12} tickLine={false} axisLine={false} />
                                                     <Tooltip contentStyle={{ background: 'var(--background)', border: '1px solid var(--glass-border)' }} />
-                                                    <Area type="monotone" dataKey="yield" stroke="var(--primary)" fill="rgba(16, 185, 129, 0.1)" name="Yield (L)" />
-                                                    <Area type="monotone" dataKey="fat" stroke="var(--secondary)" fill="rgba(99, 102, 241, 0.1)" name="Fat %" />
+                                                    <Area type="monotone" dataKey="yield" stroke="var(--primary)" fill="rgba(16, 185, 129, 0.1)" name="Herd Yield (L)" />
+                                                    {categories.map((cat, i) => (
+                                                        <Area
+                                                            key={cat}
+                                                            type="monotone"
+                                                            dataKey={cat}
+                                                            stroke={i === 0 ? 'var(--primary)' : i === 1 ? 'var(--secondary)' : '#f59e0b'}
+                                                            fill="transparent"
+                                                            name={`${cat} Yield`}
+                                                        />
+                                                    ))}
                                                 </AreaChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -608,7 +731,7 @@ const FarmerDashboard: React.FC<FarmerDashboardProps> = ({ onLogout }) => {
                                         </div>
                                         <div>
                                             <h2 style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>{userProfile?.full_name}</h2>
-                                            <p style={{ color: 'var(--text-dim)' }}>Premium Farmer Member since 2024</p>
+                                            <p style={{ color: 'var(--text-dim)' }}>Premium Farmer Member</p>
                                             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
                                                 <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--primary)', padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 700 }}>VERIFIED</span>
                                                 <span style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--secondary)', padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 700 }}>PRO BUNDLE</span>

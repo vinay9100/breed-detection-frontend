@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useScroll, useTransform, useInView, useMotionValue, animate } from 'framer-motion';
-import { ChevronRight, Activity, Zap, BarChart3, Binary, Network, Sun, Moon } from 'lucide-react';
+import { ChevronRight, Activity, Zap, BarChart3, Binary, Network, Sun, Moon, Dna, Eye, ShieldCheck, Microscope, Beef, Camera, Shield, BarChart2 } from 'lucide-react';
+import officialLogo from '../assets/logo.png';
 
 interface LandingPageProps {
     onGetStarted: () => void;
@@ -68,8 +69,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                         whileHover={{ scale: 1.05 }}
                         className="flex items-center gap-2 cursor-pointer"
                     >
-                        <div style={{ width: '45px', height: '45px', borderRadius: '14px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 30px rgba(0, 229, 255, 0.2)' }}>
-                            <Zap size={26} color="#00E5FF" className="animate-pulse" />
+                        <div style={{ width: '45px', height: '45px', borderRadius: '14px', background: 'white', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 30px rgba(16, 185, 129, 0.15)', overflow: 'hidden' }}>
+                            <img src={officialLogo} alt="BSAI Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                         </div>
                         <span className="font-outfit" style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-1px' }}>
                             BreedSure<span className="gradient-text">AI</span>
@@ -77,22 +78,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                     </motion.div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                        {['Database', 'BPA Portal', 'Live Feed'].map((link) => (
-                            <motion.a
-                                key={link}
-                                href={`#${link}`}
-                                whileHover={{ x: 3, color: 'var(--secondary)' }}
-                                style={{ textDecoration: 'none', color: 'var(--text-dim)', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'uppercase' }}
-                            >
-                                {link === 'Live Feed' && (
-                                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                                        <div style={{ position: 'absolute', width: '8px', height: '8px', background: '#ef4444', borderRadius: '50%', opacity: 0.6 }} className="animate-pulse" />
-                                        <Network size={14} style={{ color: '#ef4444' }} />
-                                    </div>
-                                )}
-                                {link}
-                            </motion.a>
-                        ))}
+
                         <button
                             onClick={toggleTheme}
                             className="glass"
@@ -169,13 +155,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                         <p style={{ color: 'var(--text-dim)', fontSize: '1.25rem' }}>High-Fidelity Veterinary Recognition Systems</p>
                     </div>
                     <div className="stat-grid" style={{ gap: '3rem' }}>
-                        {[{ icon: Binary, title: 'Genetic ID Engine' }, { icon: Activity, title: 'Thermal HUD', color: 'var(--primary)' }, { icon: BarChart3, title: 'Pedigree Tree', dark: true }].map((item, i) => (
+                        {[
+                            { icon: Camera, title: 'AI Scanner', desc: 'Real-time breed identification and genomic verification layering.' },
+                            { icon: Shield, title: 'Vaccination Tracker', color: 'var(--primary)', desc: 'Automated herd immunization records and life-cycle alerts.' },
+                            { icon: BarChart2, title: 'Milk Analytics', dark: true, desc: 'Advanced yield forecasting and nutritional performance insights.' }
+                        ].map((item, i) => (
                             <div key={i} className="glass-card" style={{ background: item.dark ? 'var(--accent)' : 'var(--glass-bg)', borderRadius: '32px', padding: '3rem', color: item.dark ? 'white' : 'var(--text)' }}>
-                                <div style={{ width: '80px', height: '80px', borderRadius: '20px', background: 'rgba(0, 229, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem', color: item.color || 'var(--secondary)' }}>
+                                <div style={{ width: '80px', height: '80px', borderRadius: '20px', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem', color: item.color || '#10B981' }}>
                                     <item.icon size={40} />
                                 </div>
                                 <h3 style={{ fontSize: '2rem', marginBottom: '1rem', textAlign: 'center' }}>{item.title}</h3>
-                                <p style={{ color: item.dark ? 'rgba(255,255,255,0.6)' : 'var(--text-dim)', textAlign: 'center' }}>Forensic detection protocols for high-purity breed validation.</p>
+                                <p style={{ color: item.dark ? 'rgba(255,255,255,0.6)' : 'var(--text-dim)', textAlign: 'center' }}>{item.desc}</p>
                             </div>
                         ))}
                     </div>
@@ -214,7 +204,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <footer style={{ padding: '6rem 0', background: 'var(--background)', borderTop: '1px solid var(--glass-border)' }}>
                 <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div className="flex items-center gap-2">
-                        <Zap size={24} color="var(--primary)" />
+                        <img src={officialLogo} alt="BSAI Logo" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
                         <span className="font-outfit" style={{ fontSize: '1.5rem', fontWeight: 900 }}>BreedSureAI</span>
                     </div>
                     <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>© 2026 DISTRICT INFRASTRUCTURE. AI-POWERED GENETICS.</p>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, X, Info, AlertTriangle, CheckCircle, ExternalLink, Calendar } from 'lucide-react';
+import { Bell, X, Info, AlertTriangle, CheckCircle } from 'lucide-react';
 import { farmerApi } from '../services/api';
 
 interface Notification {
-    id: number;
+    id: number | string;
     title: string;
     message: string;
     type: 'info' | 'warning' | 'success' | 'alert';
@@ -14,17 +14,27 @@ interface Notification {
 interface NotificationCenterProps {
     isOpen: boolean;
     onClose: () => void;
+    onUnreadChange?: (count: number) => void;
 }
 
-const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose }) => {
+const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose, onUnreadChange }) => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchNotifications();
+    }, []);
 
     useEffect(() => {
         if (isOpen) {
             fetchNotifications();
         }
     }, [isOpen]);
+
+    useEffect(() => {
+        const unreadCount = notifications.filter(n => !n.is_read).length;
+        if (onUnreadChange) onUnreadChange(unreadCount);
+    }, [notifications, onUnreadChange]);
 
     const fetchNotifications = async () => {
         try {
@@ -34,7 +44,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                 farmerApi.getAlerts()
             ]);
 
-            const combined = [
+            const readAlerts = JSON.parse(localStorage.getItem('read_alerts') || '[]');
+
+            const combined: Notification[] = [
                 ...notifRes.data.map((n: any) => ({ ...n, type: n.type || 'info' })),
                 ...alertRes.data.map((a: any) => ({
                     id: `alert-${a.id}`,
@@ -42,7 +54,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                     message: a.message,
                     type: 'alert',
                     created_at: a.created_at,
-                    is_read: false
+                    is_read: readAlerts.includes(`alert-${a.id}`)
                 }))
             ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -64,13 +76,25 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
         if (typeof id === 'number') {
             try {
                 await farmerApi.markNotificationRead(id);
-                setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
+                setNotifications(notifications.map(n => n.id.toString() === id.toString() ? { ...n, is_read: true } : n));
             } catch (error) {
                 console.error('Failed to mark as read:', error);
             }
         } else {
             // Local read for alerts
-            setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
+            const readAlerts = JSON.parse(localStorage.getItem('read_alerts') || '[]');
+            if (!readAlerts.includes(id)) {
+                readAlerts.push(id);
+                localStorage.setItem('read_alerts', JSON.stringify(readAlerts));
+            }
+            setNotifications(notifications.map(n => n.id.toString() === id.toString() ? { ...n, is_read: true } : n));
+        }
+    };
+
+    const markAllAsRead = async () => {
+        const unread = notifications.filter(n => !n.is_read);
+        for (const notif of unread) {
+            await markAsRead(notif.id);
         }
     };
 
@@ -94,18 +118,25 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
                     <Bell size={20} color="var(--primary)" />
                     <h3 className="font-outfit" style={{ margin: 0 }}>Center Command</h3>
                 </div>
-                <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
-                    <X size={20} />
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {notifications.some(n => !n.is_read) && (
+                        <button onClick={markAllAsRead} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+                            Mark All Read
+                        </button>
+                    )}
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer' }}>
+                        <X size={20} />
+                    </button>
+                </div>
             </header>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
-                {loading ? (
+                {loading && notifications.length === 0 ? (
                     <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-dim)' }}>Syncing alerts...</div>
                 ) : notifications.length > 0 ? (
                     notifications.map((notif) => (
                         <div
-                            key={notif.id}
+                            key={notif.id.toString()}
                             onClick={() => markAsRead(notif.id)}
                             style={{
                                 padding: '1.25rem',

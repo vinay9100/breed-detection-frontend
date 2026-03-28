@@ -435,11 +435,15 @@ def get_analytics(time_filter: str = "Week", current_user: models.User = Depends
         # Avg yield for BPA: all detections
         avg_yield_val = db.query(func.avg(models.AnimalDetection.yield_estimate)).scalar() or 0.0
     else:
-        base_query = db.query(models.AnimalDetection).filter(models.AnimalDetection.user_id == current_user.id)
-        if threshold_date:
-            base_query = base_query.filter(models.AnimalDetection.detected_at >= threshold_date)
-        total_animals = base_query.count()
+        # For Farmers: Count unique animals (by ear tag, or distinct breed/date combinations if tags missing)
+        reg_animals_count = db.query(models.RegisteredAnimal).filter(models.RegisteredAnimal.owner_name == current_user.full_name).count()
+        det_tags = db.query(models.AnimalDetection.animal_ear_tag).filter(models.AnimalDetection.user_id == current_user.id, models.AnimalDetection.animal_ear_tag != None).distinct().count()
         
+        # Total unique animals is approximate since tags might not be used
+        total_animals = max(reg_animals_count, det_tags)
+        if total_animals == 0:
+            total_animals = db.query(models.AnimalDetection.breed_name).filter(models.AnimalDetection.user_id == current_user.id).distinct().count()
+
         avg_acc_query = db.query(func.avg(models.AnimalDetection.confidence_score)).filter(models.AnimalDetection.user_id == current_user.id)
         if threshold_date:
             avg_acc_query = avg_acc_query.filter(models.AnimalDetection.detected_at >= threshold_date)
@@ -456,13 +460,19 @@ def get_analytics(time_filter: str = "Week", current_user: models.User = Depends
             pie_results = pie_results.filter(models.AnimalDetection.detected_at >= threshold_date)
         pie_results = pie_results.group_by('name').all()
         pie_chart = [schemas.PieChartData(name=row.name, count=row.count) for row in pie_results]
-        bar_results = db.query(func.date(models.AnimalDetection.detected_at).label('date'), func.count(models.AnimalDetection.id).label('count'), func.avg(models.AnimalDetection.yield_estimate).label('avg_yield')).filter(models.AnimalDetection.user_id == current_user.id)
+
+        # Bar results: Group by date and return SUM of yields for the overview (Total herd yield)
+        bar_results = db.query(
+            func.date(models.AnimalDetection.detected_at).label('date'), 
+            func.count(models.AnimalDetection.id).label('count'), 
+            func.sum(models.AnimalDetection.yield_estimate).label('total_yield')
+        ).filter(models.AnimalDetection.user_id == current_user.id)
         if threshold_date:
             bar_results = bar_results.filter(models.AnimalDetection.detected_at >= threshold_date)
         bar_results = bar_results.group_by('date').order_by('date').all()
         
         # Padding logic
-        bar_dict = {str(row.date): (row.count, row.avg_yield) for row in bar_results}
+        bar_dict = {str(row.date): (row.count, row.total_yield) for row in bar_results}
         padded_bar_chart = []
         now = datetime.now()
         days_to_pad = 7
@@ -577,7 +587,11 @@ def get_animals(db: Session = Depends(get_db), current_user: models.User = Depen
     if current_user.role == "bpa":
         animals = db.query(models.RegisteredAnimal).all()
     else:
-        animals = db.query(models.RegisteredAnimal).filter(models.RegisteredAnimal.bpa_id == current_user.id).all()
+        # For farmers, filter by owner_name matching their full name
+        animals = db.query(models.RegisteredAnimal).filter(
+            (models.RegisteredAnimal.owner_name == current_user.full_name) | 
+            (models.RegisteredAnimal.owner_name == current_user.email)
+        ).all()
     results = []
     for animal in animals:
         latest_scan = db.query(models.AnimalDetection).filter(
@@ -781,10 +795,9 @@ def get_timetable(current_user: models.User = Depends(security.get_current_user)
 
 @app.post("/timetable/generate")
 def generate_timetable(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(get_db)):
-    # Check if timetable already exists
-    existing = db.query(models.TimetableTask).filter(models.TimetableTask.user_id == current_user.id).first()
-    if existing:
-        return {"message": "Timetable already generated"}
+    # Delete existing timetable tasks if any (Reset Protocol)
+    db.query(models.TimetableTask).filter(models.TimetableTask.user_id == current_user.id).delete()
+
         
     tasks = [
         {"day": 1, "title": "Breed Selection Check", "desc": "Review the best breeds for your local climate and water availability."},
@@ -815,9 +828,10 @@ def complete_task(task_id: int, current_user: models.User = Depends(security.get
     task = db.query(models.TimetableTask).filter(models.TimetableTask.id == task_id, models.TimetableTask.user_id == current_user.id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    task.is_completed = True
+    task.is_completed = not task.is_completed
     db.commit()
-    return {"message": "Task completed"}
+    status_str = "completed" if task.is_completed else "reset to pending"
+    return {"message": f"Task {status_str}"}
 
 @app.get("/bpa-stats", response_model=schemas.BPAStatsResponse)
 def get_bpa_stats(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(get_db)):

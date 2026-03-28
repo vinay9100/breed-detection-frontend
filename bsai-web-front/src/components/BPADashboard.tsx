@@ -167,6 +167,8 @@ const BPADashboard: React.FC<BPADashboardProps> = ({ onLogout }) => {
         }
     };
 
+    const [unreadCount, setUnreadCount] = useState(0);
+
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--background)' }}>
             <motion.aside initial={{ x: -250 }} animate={{ x: 0 }} className="sidebar">
@@ -217,11 +219,16 @@ const BPADashboard: React.FC<BPADashboardProps> = ({ onLogout }) => {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => setShowNotifications(!showNotifications)}
-                            style={{ width: '45px', height: '45px', borderRadius: '12px', border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showNotifications ? 'var(--primary)' : 'var(--text-dim)', cursor: 'pointer' }}
+                            style={{ position: 'relative', width: '45px', height: '45px', borderRadius: '12px', border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: showNotifications ? 'var(--primary)' : 'var(--text-dim)', cursor: 'pointer' }}
                         >
                             <Bell size={20} />
+                            {unreadCount > 0 && (
+                                <span style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ef4444', color: 'white', fontSize: '0.65rem', fontWeight: 800, width: '18px', height: '18px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--background)' }}>
+                                    {unreadCount}
+                                </span>
+                            )}
                         </motion.button>
-                        <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
+                        <NotificationCenter isOpen={showNotifications} onClose={() => setShowNotifications(false)} onUnreadChange={setUnreadCount} />
 
                         <div style={{ width: '45px', height: '45px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--primary)' }}>
                             <img src={userProfile?.profile_photo ? `http://localhost:8000/${userProfile.profile_photo}` : `https://api.dicebear.com/7.x/avataaars/svg?seed=${userProfile?.full_name || 'BPA'}`} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -630,7 +637,6 @@ const BPADashboard: React.FC<BPADashboardProps> = ({ onLogout }) => {
                                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                                 <thead>
                                                     <tr style={{ textAlign: 'left', background: 'rgba(255,255,255,0.02)' }}>
-                                                        <th style={{ padding: '1.25rem' }}>Transaction ID</th>
                                                         <th style={{ padding: '1.25rem' }}>Activity Type</th>
                                                         <th style={{ padding: '1.25rem' }}>Officer Hash</th>
                                                         <th style={{ padding: '1.25rem' }}>Timestamp</th>
@@ -640,9 +646,6 @@ const BPADashboard: React.FC<BPADashboardProps> = ({ onLogout }) => {
                                                 <tbody>
                                                     {detections.map((det) => (
                                                         <tr key={det.id} style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                                                            <td style={{ padding: '1.25rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                                                                TX-{det.id}-{Math.random().toString(36).substring(7).toUpperCase()}
-                                                            </td>
                                                             <td style={{ padding: '1.25rem' }}>
                                                                 <div style={{ fontWeight: 600 }}>AI Breed Analysis</div>
                                                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Result: {det.breed_name}</div>

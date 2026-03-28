@@ -92,8 +92,8 @@ const Timetable: React.FC = () => {
                         <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{Math.round(progress)}% Complete</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Phase</span>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{Math.ceil(tasks.filter(t => t.is_completed).length / 3) || 1}/7</div>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Tasks</span>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{tasks.filter(t => t.is_completed).length}/{tasks.length || 21}</div>
                     </div>
                 </div>
                 <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
