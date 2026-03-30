@@ -25,8 +25,8 @@ enum AppRoute: Hashable {
     case reportPreview
     case analyticsHub
     case yieldPrediction
-    case yieldForecast
-    case breedComparison
+    case yieldForecast(params: YieldPredictionParams)
+    case breedComparison(detectedBreed: String? = nil)
     case shareReport
     case scanHistory
     case performanceTrends
@@ -188,12 +188,12 @@ struct AppRootView: View {
             YieldPredictionView(path: $path)
                 .navigationBarHidden(true)
 
-        case .yieldForecast:
-            YieldForecastView(path: $path)
+        case .yieldForecast(let params):
+            YieldForecastView(path: $path, params: params)
                 .navigationBarHidden(true)
 
-        case .breedComparison:
-            BreedComparisonView(path: $path)
+        case .breedComparison(let detectedBreed):
+            BreedComparisonView(path: $path, initialBreedName: detectedBreed)
                 .navigationBarHidden(true)
 
         case .shareReport:
@@ -401,7 +401,7 @@ struct AddVaccinationView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.secondary)
                 
-                DatePicker("Pick a date", selection: $selectedDate, displayedComponents: .date)
+                DatePicker("Pick a date", selection: $selectedDate, in: Date()...Calendar.current.date(from: DateComponents(year: 2060, month: 12, day: 31))!, displayedComponents: .date)
                     .datePickerStyle(GraphicalDatePickerStyle())
                     .padding()
                     .background(Color.cardBackground)

@@ -1180,6 +1180,14 @@ struct VaccinationRecord: Codable, Identifiable {
     let status: String
 }
 
+struct YieldPredictionParams: Codable, Hashable {
+    let dailyYield: Double
+    let lactationStage: String
+    let feedQuality: String
+    let temperature: Double
+    let timeframe: String
+}
+
 struct VaccinationCreate: Codable {
     let vaccine_name: String
     let type: String?
@@ -1202,6 +1210,7 @@ struct APIBarChartData: Codable {
 
 struct AnalyticsSummaryResponse: Codable {
     let total_animals: Int
+    let total_scans: Int
     let average_accuracy: Double
     let average_yield: Double?
     let pie_chart: [APIPieChartData]
@@ -1210,6 +1219,7 @@ struct AnalyticsSummaryResponse: Codable {
 
 struct BPAStats: Codable {
     let total_animals: Int
+    let total_scans: Int
     let total_owners: Int
     let pending_verifications: Int
     let ai_detections: Int

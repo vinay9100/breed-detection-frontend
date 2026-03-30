@@ -133,7 +133,7 @@ struct ReportPreviewView: View {
             ReportSection(title: "Overview", items: [
                 ReportRow(label: "Total Animals:", value: "\(summary?.total_animals ?? 0)"),
                 ReportRow(label: "Lactating:", value: "\(summary?.total_animals != 0 ? Int(Double(summary?.total_animals ?? 0) * 0.75) : 0)"),
-                ReportRow(label: "Total Scans:", value: "\(summary?.bar_chart.reduce(0) { $0 + $1.value } ?? 0)")
+                ReportRow(label: "Total Scans:", value: "\(summary?.total_scans ?? 0)")
             ])
             
             Divider().background(Color.gray.opacity(0.1))

@@ -64,7 +64,14 @@ struct ProductivityScoreView: View {
     }
     
     private var scoreGaugeCard: some View {
-        let score = (breedInfo?.productivity == "Excellent") ? 94 : ((breedInfo?.productivity == "Good") ? 82 : 75)
+        let productivity = breedInfo?.productivity ?? "Moderate"
+        let score: Int
+        
+        if productivity.contains("Excellent") { score = 94 }
+        else if productivity.contains("Good") { score = 84 }
+        else if productivity.contains("Moderate") { score = 76 }
+        else if productivity.contains("Low") { score = 62 }
+        else { score = 75 }
         
         return VStack(spacing: 20) {
             ZStack {
@@ -75,7 +82,7 @@ struct ProductivityScoreView: View {
                 Circle()
                     .trim(from: 0, to: appeared ? CGFloat(Double(score) / 100.0) : 0)
                     .stroke(
-                        LinearGradient(colors: [.green, .green.opacity(0.5)], startPoint: .top, endPoint: .bottom),
+                        LinearGradient(colors: [score > 80 ? .green : (score > 70 ? .blue : .orange), .green.opacity(0.5)], startPoint: .top, endPoint: .bottom),
                         style: StrokeStyle(lineWidth: 15, lineCap: .round)
                     )
                     .frame(width: 150, height: 150)
@@ -93,7 +100,7 @@ struct ProductivityScoreView: View {
             .padding(.top, 10)
             
             VStack(spacing: 5) {
-                Text(breedInfo?.productivity ?? "High")
+                Text(breedInfo?.productivity ?? "Moderate")
                     .font(.title3.bold())
                 Text("Efficiency rating for \(prediction?.breed_name ?? "this breed")")
                     .font(.subheadline)
@@ -108,15 +115,19 @@ struct ProductivityScoreView: View {
     }
     
     private var performanceBreakdown: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        let prod = breedInfo?.productivity ?? ""
+        let clim = breedInfo?.climateTolerance ?? ""
+        let feed = breedInfo?.feedCost ?? ""
+        
+        return VStack(alignment: .leading, spacing: 20) {
             Text("Performance Factors")
                 .font(.headline)
             
             VStack(spacing: 25) {
-                ScoreProgressBar(label: "Genetic Quality", score: 92, color: .blue)
-                ScoreProgressBar(label: "Productivity Level", score: breedInfo?.productivity == "Excellent" ? 95 : 85, color: .green)
-                ScoreProgressBar(label: "Adaptability", score: breedInfo?.climateTolerance == "Excellent" ? 98 : 88, color: .purple)
-                ScoreProgressBar(label: "Feed Conversion", score: breedInfo?.feedCost == "Low" ? 94 : 82, color: .teal)
+                ScoreProgressBar(label: "Genetic Quality", score: prod.contains("Excellent") ? 94 : (prod.contains("Good") ? 88 : 82), color: .blue)
+                ScoreProgressBar(label: "Productivity Level", score: prod.contains("Excellent") ? 95 : (prod.contains("Good") ? 85 : (prod.contains("Moderate") ? 75 : 60)), color: .green)
+                ScoreProgressBar(label: "Adaptability", score: clim.contains("Excellent") ? 98 : (clim.contains("Good") ? 88 : 82), color: .purple)
+                ScoreProgressBar(label: "Feed Conversion", score: feed.contains("Low") ? 94 : (feed.contains("Medium") ? 86 : 78), color: .teal)
             }
         }
         .padding(25)

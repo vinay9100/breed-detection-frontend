@@ -75,6 +75,102 @@ struct BreedRepository {
             climateTolerance: "Good",
             feedCost: "Medium",
             productivity: "Good"
+        ),
+        BreedInfo(
+            name: "Murrah",
+            category: "Buffalo",
+            origin: "India (Haryana)",
+            milkYield: "13.5L",
+            cost: "Medium",
+            climate: "Excellent",
+            fatContent: "7.5-8%",
+            climateTolerance: "Excellent",
+            feedCost: "Low",
+            productivity: "Excellent"
+        ),
+        BreedInfo(
+            name: "Jaffrabadi",
+            category: "Buffalo",
+            origin: "India (Gujarat)",
+            milkYield: "17.5L",
+            cost: "Medium",
+            climate: "Excellent",
+            fatContent: "8-9%",
+            climateTolerance: "Excellent",
+            feedCost: "Low",
+            productivity: "Excellent"
+        ),
+        BreedInfo(
+            name: "Pandharpuri",
+            category: "Buffalo",
+            origin: "India (Maharashtra)",
+            milkYield: "8L",
+            cost: "Low",
+            climate: "Excellent",
+            fatContent: "7-8%",
+            climateTolerance: "Excellent",
+            feedCost: "Low",
+            productivity: "Good"
+        ),
+        BreedInfo(
+            name: "Toda",
+            category: "Buffalo",
+            origin: "India (Tamil Nadu)",
+            milkYield: "5L",
+            cost: "Low",
+            climate: "Moderate",
+            fatContent: "8%",
+            climateTolerance: "High",
+            feedCost: "Low",
+            productivity: "Moderate"
+        ),
+        BreedInfo(
+            name: "Deoni",
+            category: "Dairy Cattle",
+            origin: "India (Maharashtra)",
+            milkYield: "4L",
+            cost: "Low",
+            climate: "Excellent",
+            fatContent: "4.3%",
+            climateTolerance: "High",
+            feedCost: "Low",
+            productivity: "Moderate"
+        ),
+        BreedInfo(
+            name: "Khillari",
+            category: "Draught Cattle",
+            origin: "India (Maharashtra)",
+            milkYield: "2L",
+            cost: "Low",
+            climate: "Excellent",
+            fatContent: "4.2%",
+            climateTolerance: "Very High",
+            feedCost: "Low",
+            productivity: "Low (Work-focused)"
+        ),
+        BreedInfo(
+            name: "Kankrej",
+            category: "Dairy Cattle",
+            origin: "India (Gujarat)",
+            milkYield: "12.5L",
+            cost: "Medium",
+            climate: "Excellent",
+            fatContent: "4.8%",
+            climateTolerance: "Excellent",
+            feedCost: "Low",
+            productivity: "Moderate"
+        ),
+        BreedInfo(
+            name: "Kangayam",
+            category: "Draught Cattle",
+            origin: "India (Tamil Nadu)",
+            milkYield: "3L",
+            cost: "Low",
+            climate: "Excellent",
+            fatContent: "4.5%",
+            climateTolerance: "Excellent",
+            feedCost: "Low",
+            productivity: "Moderate"
         )
     ]
     

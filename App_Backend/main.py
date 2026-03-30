@@ -410,39 +410,54 @@ def get_analytics(time_filter: str = "Week", current_user: models.User = Depends
             padded_bar_chart.append(schemas.BarChartData(date=d_str, value=bar_dict.get(d_str, 0)))
         bar_chart = padded_bar_chart
         
-        # For BPA Pie Chart: Mix of breeds from both
-        det_pie = db.query(models.AnimalDetection.breed_name.label('name'), func.count(models.AnimalDetection.id).label('count'))
-        if threshold_date:
-            det_pie = det_pie.filter(models.AnimalDetection.detected_at >= threshold_date)
-        det_pie = det_pie.group_by('name').all()
+        # For BPA Pie Chart: Unique animals per breed across both
+        all_reg = db.query(models.RegisteredAnimal.ear_tag_number, models.RegisteredAnimal.breed.label('breed')).all()
+        all_det = db.query(models.AnimalDetection.animal_ear_tag, models.AnimalDetection.breed_name.label('breed')).filter(models.AnimalDetection.animal_ear_tag != None).all()
         
-        reg_pie = db.query(models.RegisteredAnimal.breed.label('name'), func.count(models.RegisteredAnimal.id).label('count'))
-        if threshold_date:
-            reg_pie = reg_pie.filter(models.RegisteredAnimal.registered_at >= threshold_date)
-        reg_pie = reg_pie.group_by('name').all()
+        # Breed -> Set of ear tags (to count unique animals per breed)
+        breed_to_tags = {}
+        for row in all_reg:
+            if row.breed not in breed_to_tags: breed_to_tags[row.breed] = set()
+            breed_to_tags[row.breed].add(row.ear_tag_number)
+        for row in all_det:
+            if row.breed not in breed_to_tags: breed_to_tags[row.breed] = set()
+            breed_to_tags[row.breed].add(row.animal_ear_tag)
+            
+        pie_chart = [schemas.PieChartData(name=name, count=len(tags)) for name, tags in breed_to_tags.items()]
         
-        pie_dict = {}
-        for row in det_pie: pie_dict[row.name] = pie_dict.get(row.name, 0) + row.count
-        for row in reg_pie: pie_dict[row.name] = pie_dict.get(row.name, 0) + row.count
-        pie_chart = [schemas.PieChartData(name=name, count=count) for name, count in pie_dict.items()]
-        
-        # Total animals for BPA analytics summary
-        reg_tags = db.query(models.RegisteredAnimal.ear_tag_number)
-        det_tags = db.query(models.AnimalDetection.animal_ear_tag).filter(models.AnimalDetection.animal_ear_tag != None)
-        unique_tags = set([t[0] for t in reg_tags.all()] + [t[0] for t in det_tags.all()])
-        total_animals = len(unique_tags)
+        # Total unique animals across all breeds
+        total_animals = len(set().union(*breed_to_tags.values())) if breed_to_tags else 0
+        total_scans = db.query(models.AnimalDetection).count()
         average_accuracy = 100.0
         # Avg yield for BPA: all detections
         avg_yield_val = db.query(func.avg(models.AnimalDetection.yield_estimate)).scalar() or 0.0
     else:
-        # For Farmers: Count unique animals (by ear tag, or distinct breed/date combinations if tags missing)
-        reg_animals_count = db.query(models.RegisteredAnimal).filter(models.RegisteredAnimal.owner_name == current_user.full_name).count()
-        det_tags = db.query(models.AnimalDetection.animal_ear_tag).filter(models.AnimalDetection.user_id == current_user.id, models.AnimalDetection.animal_ear_tag != None).distinct().count()
+        # For Farmers: Count unique animals per breed
+        # We consolidate by ear_tag_number to ensure correct percentages
+        reg_animals = db.query(models.RegisteredAnimal.ear_tag_number, models.RegisteredAnimal.breed).filter(models.RegisteredAnimal.owner_name == current_user.full_name).all()
+        det_animals = db.query(models.AnimalDetection.animal_ear_tag, models.AnimalDetection.breed_name).filter(models.AnimalDetection.user_id == current_user.id, models.AnimalDetection.animal_ear_tag != None).all()
         
-        # Total unique animals is approximate since tags might not be used
-        total_animals = max(reg_animals_count, det_tags)
-        if total_animals == 0:
-            total_animals = db.query(models.AnimalDetection.breed_name).filter(models.AnimalDetection.user_id == current_user.id).distinct().count()
+        breed_to_tags = {}
+        for row in reg_animals:
+            if row.breed not in breed_to_tags: breed_to_tags[row.breed] = set()
+            breed_to_tags[row.breed].add(row.ear_tag_number)
+        for row in det_animals:
+            if row.breed_name not in breed_to_tags: breed_to_tags[row.breed_name] = set()
+            breed_to_tags[row.breed_name].add(row.animal_ear_tag)
+            
+        if not breed_to_tags:
+            # Fallback to scan counts if no tagged animals found
+            pie_results = db.query(models.AnimalDetection.breed_name.label('name'), func.count(models.AnimalDetection.id).label('count')).filter(models.AnimalDetection.user_id == current_user.id)
+            if threshold_date:
+                pie_results = pie_results.filter(models.AnimalDetection.detected_at >= threshold_date)
+            pie_results = pie_results.group_by('name').all()
+            pie_chart = [schemas.PieChartData(name=row.name, count=row.count) for row in pie_results]
+            total_animals = sum(row.count for row in pie_results)
+        else:
+            pie_chart = [schemas.PieChartData(name=name, count=len(tags)) for name, tags in breed_to_tags.items()]
+            total_animals = len(set().union(*breed_to_tags.values()))
+
+        total_scans = db.query(models.AnimalDetection).filter(models.AnimalDetection.user_id == current_user.id).count()
 
         avg_acc_query = db.query(func.avg(models.AnimalDetection.confidence_score)).filter(models.AnimalDetection.user_id == current_user.id)
         if threshold_date:
@@ -454,12 +469,6 @@ def get_analytics(time_filter: str = "Week", current_user: models.User = Depends
         if threshold_date:
              avg_yield_query = avg_yield_query.filter(models.AnimalDetection.detected_at >= threshold_date)
         avg_yield_val = avg_yield_query.scalar() or 0.0
-        
-        pie_results = db.query(models.AnimalDetection.breed_name.label('name'), func.count(models.AnimalDetection.id).label('count')).filter(models.AnimalDetection.user_id == current_user.id)
-        if threshold_date:
-            pie_results = pie_results.filter(models.AnimalDetection.detected_at >= threshold_date)
-        pie_results = pie_results.group_by('name').all()
-        pie_chart = [schemas.PieChartData(name=row.name, count=row.count) for row in pie_results]
 
         # Bar results: Group by date and return SUM of yields for the overview (Total herd yield)
         bar_results = db.query(
@@ -488,6 +497,7 @@ def get_analytics(time_filter: str = "Week", current_user: models.User = Depends
 
     return schemas.AnalyticsSummaryResponse(
         total_animals=total_animals, 
+        total_scans=total_scans,
         average_accuracy=average_accuracy, 
         average_yield=avg_yield_val, 
         pie_chart=pie_chart, 
@@ -610,16 +620,32 @@ def get_bpa_dashboard_stats(db: Session = Depends(get_db), current_user: models.
         raise HTTPException(status_code=403, detail="Not authorized")
     total_animals = db.query(models.RegisteredAnimal).count()
     total_owners = db.query(models.RegisteredAnimal.owner_name).distinct().count()
-    ai_detections = db.query(models.AnimalDetection).count()
-    return {"total_animals": total_animals, "total_owners": total_owners, "pending_verifications": 0, "ai_detections": ai_detections}
+    total_scans = db.query(models.AnimalDetection).count()
+    ai_detections = db.query(models.AnimalDetection).filter(func.date(models.AnimalDetection.detected_at) == func.date(datetime.utcnow())).count()
+    return {"total_animals": total_animals, "total_scans": total_scans, "total_owners": total_owners, "pending_verifications": 0, "ai_detections": ai_detections}
 
 @app.get("/reports/summary", response_model=schemas.AnalyticsSummaryResponse)
 async def get_report_summary(current_user: models.User = Depends(security.get_current_user), db: Session = Depends(get_db)):
-    total_animals = db.query(models.AnimalDetection).filter(models.AnimalDetection.user_id == current_user.id).count()
-    avg_accuracy = db.query(func.avg(models.AnimalDetection.confidence_score)).filter(models.AnimalDetection.user_id == current_user.id).scalar() or 0.0
-    pie_data = db.query(models.AnimalDetection.breed_name, func.count(models.AnimalDetection.id)).filter(models.AnimalDetection.user_id == current_user.id).group_by(models.AnimalDetection.breed_name).all()
-    bar_data = db.query(func.date(models.AnimalDetection.detected_at).label('date'), func.count(models.AnimalDetection.id).label('value'), func.avg(models.AnimalDetection.yield_estimate).label('avg_yield')).filter(models.AnimalDetection.user_id == current_user.id).group_by(func.date(models.AnimalDetection.detected_at)).order_by('date').limit(7).all()
-    return {"total_animals": total_animals, "average_accuracy": avg_accuracy, "pie_chart": [{"name": p[0], "count": p[1]} for p in pie_data], "bar_chart": [{"date": str(b[0]), "value": b[1], "avg_yield": b[2]} for b in bar_data]}
+    if current_user.role == "bpa":
+        total_animals = db.query(models.RegisteredAnimal).count()
+        total_scans = db.query(models.AnimalDetection).count()
+        avg_accuracy = db.query(func.avg(models.AnimalDetection.confidence_score)).scalar() or 0.0
+        pie_data = db.query(models.AnimalDetection.breed_name, func.count(models.AnimalDetection.id)).group_by(models.AnimalDetection.breed_name).all()
+        bar_data = db.query(func.date(models.AnimalDetection.detected_at).label('date'), func.count(models.AnimalDetection.id).label('value'), func.avg(models.AnimalDetection.yield_estimate).label('avg_yield')).group_by(func.date(models.AnimalDetection.detected_at)).order_by('date').limit(7).all()
+    else:
+        total_animals = db.query(models.RegisteredAnimal).filter(models.RegisteredAnimal.owner_name == current_user.full_name).count()
+        total_scans = db.query(models.AnimalDetection).filter(models.AnimalDetection.user_id == current_user.id).count()
+        avg_accuracy = db.query(func.avg(models.AnimalDetection.confidence_score)).filter(models.AnimalDetection.user_id == current_user.id).scalar() or 0.0
+        pie_data = db.query(models.AnimalDetection.breed_name, func.count(models.AnimalDetection.id)).filter(models.AnimalDetection.user_id == current_user.id).group_by(models.AnimalDetection.breed_name).all()
+        bar_data = db.query(func.date(models.AnimalDetection.detected_at).label('date'), func.count(models.AnimalDetection.id).label('value'), func.avg(models.AnimalDetection.yield_estimate).label('avg_yield')).filter(models.AnimalDetection.user_id == current_user.id).group_by(func.date(models.AnimalDetection.detected_at)).order_by('date').limit(7).all()
+    
+    return {
+        "total_animals": total_animals, 
+        "total_scans": total_scans,
+        "average_accuracy": avg_accuracy, 
+        "pie_chart": [{"name": p[0], "count": p[1]} for p in pie_data], 
+        "bar_chart": [{"date": str(b[0]), "value": b[1], "avg_yield": b[2]} for b in bar_data]
+    }
 
 @app.get("/activity/recent", response_model=List[schemas.RecentActivity])
 def get_recent_activity(db: Session = Depends(get_db), current_user: models.User = Depends(security.get_current_user)):
@@ -859,13 +885,15 @@ def get_bpa_stats(current_user: models.User = Depends(security.get_current_user)
     
     # AI Detections today
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    ai_detections = db.query(models.AnimalDetection).filter(models.AnimalDetection.detected_at >= today_start).count()
+    ai_detections_today = db.query(models.AnimalDetection).filter(models.AnimalDetection.detected_at >= today_start).count()
+    total_scans = db.query(models.AnimalDetection).count()
     
     return {
         "total_animals": total_animals,
+        "total_scans": total_scans,
         "total_owners": total_owners,
         "pending_verifications": pending_verifications,
-        "ai_detections": ai_detections
+        "ai_detections": ai_detections_today
     }
 
 @app.get("/farmers", response_model=List[schemas.UserResponse])

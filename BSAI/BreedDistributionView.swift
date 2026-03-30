@@ -139,16 +139,18 @@ struct BreedDistributionView: View {
             Text("Distribution Chart")
                 .font(.system(size: 18, weight: .bold))
             
-            HStack(spacing: 2) {
-                if breedItems.isEmpty {
-                    Rectangle().fill(Color.gray.opacity(0.1))
-                } else {
-                    ForEach(breedItems.indices, id: \.self) { i in
-                        let item = breedItems[i]
-                        Rectangle()
-                            .fill(item.color)
-                            .frame(maxWidth: .infinity)
-                            .frame(width: CGFloat(item.percentage) * 3) // approximation for visual
+            GeometryReader { geo in
+                HStack(spacing: 0) {
+                    if breedItems.isEmpty {
+                        Rectangle().fill(Color.gray.opacity(0.1))
+                    } else {
+                        ForEach(breedItems.indices, id: \.self) { i in
+                            let item = breedItems[i]
+                            let segmentWidth = geo.size.width * CGFloat(item.count) / CGFloat(max(1, summary?.total_animals ?? 1))
+                            Rectangle()
+                                .fill(item.color)
+                                .frame(width: segmentWidth)
+                        }
                     }
                 }
             }

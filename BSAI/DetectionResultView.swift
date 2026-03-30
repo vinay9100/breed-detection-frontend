@@ -252,7 +252,7 @@ struct DetectionResultView: View {
                             path.append(.diseaseRisk)
                         }
                         InsightCard(icon: "arrow.left.and.right.righttriangle.left.righttriangle.right.fill", title: "Comparison", value: "Benchmarks", color: .purple) {
-                            path.append(.breedComparison)
+                            path.append(.breedComparison(detectedBreed: AuthManager.shared.currentPrediction?.breed_name))
                         }
                     }
                     .padding(.horizontal, 24)

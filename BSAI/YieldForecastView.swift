@@ -2,10 +2,27 @@ import SwiftUI
 
 struct YieldForecastView: View {
     @Binding var path: [AppRoute]
+    let params: YieldPredictionParams
     @State private var appeared = false
     @State private var pricePerLitre: String = "65"
     
-    var predictedYield: Double = 15.7
+    var predictedYield: Double {
+        var base = params.dailyYield
+        
+        // 1. Lactation stage adjustment
+        if params.lactationStage.contains("Early") { base *= 1.05 }
+        else if params.lactationStage.contains("Late") { base *= 0.90 }
+        
+        // 2. Feed Quality
+        if params.feedQuality.contains("Premium") { base *= 1.10 }
+        else if params.feedQuality.contains("Basic") { base *= 0.85 }
+        
+        // 3. Temperature Stress
+        if params.temperature > 35 { base *= 0.90 }
+        else if params.temperature < 10 { base *= 0.95 }
+        
+        return base
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -181,9 +198,9 @@ struct YieldForecastView: View {
             }
             
             VStack(spacing: 12) {
-                ForecastRow(days: "Week 2 (Forecast)", yield: "15.8 L/day", status: "+3.9%", statusColor: .green, showIcon: true, icon: "arrow.up.right")
-                ForecastRow(days: "Week 3 (Forecast)", yield: "16.1 L/day", status: "+3.9%", statusColor: .green, showIcon: true, icon: "arrow.up.right")
-                ForecastRow(days: "Week 4 (Forecast)", yield: "15.5 L/day", status: "-3.7%", statusColor: .orange, showIcon: true, icon: "arrow.down.right")
+                ForecastRow(days: "Week 2 (Forecast)", yield: String(format: "%.1f L/day", predictedYield * 1.02), status: "+2.0%", statusColor: .green, showIcon: true, icon: "arrow.up.right")
+                ForecastRow(days: "Week 3 (Forecast)", yield: String(format: "%.1f L/day", predictedYield * 1.04), status: "+4.1%", statusColor: .green, showIcon: true, icon: "arrow.up.right")
+                ForecastRow(days: "Week 4 (Forecast)", yield: String(format: "%.1f L/day", predictedYield * 0.98), status: "-2.2%", statusColor: .orange, showIcon: true, icon: "arrow.down.right")
             }
         }
         .padding(24)
@@ -200,18 +217,21 @@ struct YieldForecastView: View {
             Text("Influencing Factors")
                 .font(.headline)
             
-            HStack(alignment: .top, spacing: 15) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                    .font(.title3)
+            VStack(alignment: .leading, spacing: 15) {
+                // Feed quality factor
+                FactorRow(icon: "leaf.fill", color: .green, title: params.feedQuality, desc: params.feedQuality.contains("Premium") ? "High nutrition supports peak production" : (params.feedQuality.contains("Basic") ? "Limited nutrients may reduce yield" : "Standard diet supports steady yield"))
                 
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Good Feed Quality")
-                        .font(.system(size: 16, weight: .bold))
-                    Text("Standard nutrition supports steady production")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                // Temperature factor
+                if params.temperature > 35 {
+                    FactorRow(icon: "thermometer.sun.fill", color: .orange, title: "Heat Stress", desc: "High temperatures may cause yield reduction")
+                } else if params.temperature < 10 {
+                    FactorRow(icon: "thermometer.snowflake", color: .blue, title: "Cold Stress", desc: "Low temperatures may slightly impact productivity")
+                } else {
+                    FactorRow(icon: "thermometer.medium", color: .green, title: "Optimal Temperature", desc: "Current climate is favorable for production")
                 }
+                
+                // Lactation factor
+                FactorRow(icon: "waveform.path", color: .purple, title: params.lactationStage, desc: params.lactationStage.contains("Early") ? "Animal is in a high-yield growth phase" : (params.lactationStage.contains("Late") ? "Yield naturally tapering towards end of cycle" : "Stable production during mid-cycle"))
             }
         }
         .padding(25)
@@ -222,6 +242,29 @@ struct YieldForecastView: View {
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 20)
         .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3), value: appeared)
+    }
+}
+
+struct FactorRow: View {
+    let icon: String
+    let color: Color
+    let title: String
+    let desc: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 15) {
+            Image(systemName: icon)
+                .foregroundColor(color)
+                .font(.title3)
+            
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title)
+                    .font(.system(size: 16, weight: .bold))
+                Text(desc)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
     }
 }
 
@@ -261,5 +304,5 @@ struct ForecastRow: View {
 }
 
 #Preview {
-    YieldForecastView(path: .constant([]))
+    YieldForecastView(path: .constant([]), params: YieldPredictionParams(dailyYield: 15.5, lactationStage: "Early (0–100 days)", feedQuality: "Standard (Normal feed)", temperature: 34.0, timeframe: "Next 30 days"))
 }

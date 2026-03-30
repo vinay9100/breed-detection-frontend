@@ -346,7 +346,7 @@ struct HomeView: View {
     private var statsRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
-                StatsCard(icon: "viewfinder", value: "\(analytics?.total_animals ?? 0)", label: localization.t("home_total_scans"), color: Color(hex: "00A661")) {
+                StatsCard(icon: "viewfinder", value: "\(analytics?.total_scans ?? 0)", label: localization.t("home_total_scans"), color: Color(hex: "00A661")) {
                     path.append(.scanHistory)
                 }
                 StatsCard(icon: "waveform.path", value: "\(Int(analytics?.average_accuracy ?? 0))%", label: localization.t("home_avg_confidence"), color: .blue) {
@@ -402,7 +402,7 @@ struct HomeView: View {
     private var bottomActionsGrid: some View {
         HStack(spacing: 16) {
             QuickActionSmallCard(icon: "waveform.path", title: localization.t("home_compare_breeds"), color: .blue) {
-                path.append(.breedComparison)
+                path.append(.breedComparison(detectedBreed: nil))
             }
             
             QuickActionSmallCard(icon: "chart.line.uptrend.xyaxis", title: localization.t("home_predict_yield"), color: .purple) {

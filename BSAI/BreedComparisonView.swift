@@ -2,11 +2,33 @@ import SwiftUI
 
 struct BreedComparisonView: View {
     @Binding var path: [AppRoute]
+    var initialBreedName: String? = nil
     @State private var appeared = false
     
     // Default to Holstein as "Detected" if coming from scan
-    @State private var detectedBreed: BreedInfo = BreedRepository.allBreeds[0]
-    @State private var comparisonBreed: BreedInfo = BreedRepository.allBreeds[1]
+    @State private var detectedBreed: BreedInfo
+    @State private var comparisonBreed: BreedInfo
+    
+    init(path: Binding<[AppRoute]>, initialBreedName: String? = nil) {
+        self._path = path
+        self.initialBreedName = initialBreedName
+        
+        let detected: BreedInfo
+        if let name = initialBreedName, let found = BreedRepository.getBreed(named: name) {
+            detected = found
+        } else {
+            detected = BreedRepository.allBreeds[0]
+        }
+        
+        self._detectedBreed = State(initialValue: detected)
+        
+        // Default comparison to Jersey (or any other breed not same as detected)
+        if detected.name == BreedRepository.allBreeds[1].name {
+            self._comparisonBreed = State(initialValue: BreedRepository.allBreeds[0])
+        } else {
+            self._comparisonBreed = State(initialValue: BreedRepository.allBreeds[1])
+        }
+    }
     
     @State private var showBreedPicker = false
     @State private var pickingForDetected = false
@@ -258,5 +280,5 @@ struct ComparisonTableRow: View {
 
 
 #Preview {
-    BreedComparisonView(path: .constant([]))
+    BreedComparisonView(path: .constant([]), initialBreedName: nil)
 }

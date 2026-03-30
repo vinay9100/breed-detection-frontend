@@ -98,6 +98,7 @@ class BarChartData(BaseModel):
 
 class AnalyticsSummaryResponse(BaseModel):
     total_animals: int
+    total_scans: int
     average_accuracy: float
     average_yield: Optional[float] = 0.0
     pie_chart: List[PieChartData]
@@ -140,6 +141,7 @@ class RecentActivity(BaseModel):
 
 class BPAStatsResponse(BaseModel):
     total_animals: int
+    total_scans: int
     total_owners: int
     pending_verifications: int
     ai_detections: int

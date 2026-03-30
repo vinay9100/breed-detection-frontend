@@ -186,7 +186,7 @@ struct BPADashboardView: View {
     
     private var statsGrid: some View {
         VStack(spacing: 16) {
-            BPAStatCard(icon: "pawprint.fill", iconColor: .green, value: "\(stats?.total_animals ?? 0)", title: "Total Animals Registered", trend: "Real-time sync", delay: 0.1, appeared: appeared) {
+            BPAStatCard(icon: "viewfinder", iconColor: .green, value: "\(stats?.total_scans ?? 0)", title: "Total Scans", trend: "All time detections", delay: 0.1, appeared: appeared) {
                 path.append(.bpaReports)
             }
             .frame(maxWidth: .infinity)

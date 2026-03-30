@@ -49,6 +49,18 @@ struct YieldPredictionView: View {
         .onAppear {
             appeared = true
         }
+        .onChange(of: dailyYield) { _, newValue in
+            let filtered = newValue.filter { "0123456789.".contains($0) }
+            // Ensure only one decimal point
+            if filtered.filter({ $0 == "." }).count > 1 {
+                dailyYield = String(filtered.prefix(while: { $0 != "." }) + "." + filtered.suffix(from: filtered.index(after: filtered.firstIndex(of: ".")!)).filter { $0 != "." })
+            } else {
+                dailyYield = filtered
+            }
+        }
+        .onChange(of: temperature) { _, newValue in
+            temperature = newValue.filter { "0123456789".contains($0) }
+        }
     }
     
     // MARK: - Subviews
@@ -169,7 +181,14 @@ struct YieldPredictionView: View {
     
     private var actionButton: some View {
         Button(action: {
-            path.append(.yieldForecast)
+            let params = YieldPredictionParams(
+                dailyYield: Double(dailyYield) ?? 15.5,
+                lactationStage: lactationStage,
+                feedQuality: feedQuality,
+                temperature: Double(temperature) ?? 34.0,
+                timeframe: timeframe
+            )
+            path.append(.yieldForecast(params: params))
         }) {
             HStack {
                 Text("Generate AI Prediction")

@@ -82,7 +82,10 @@ struct PerformanceTrendsView: View {
     }
     
     private var overallPerformanceCard: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        let scannedBreed = AuthManager.shared.currentPrediction?.breed_name
+        let scannedYield = AuthManager.shared.currentPrediction?.milk_yield_range ?? "--"
+        
+        return VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 15) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
@@ -93,29 +96,44 @@ struct PerformanceTrendsView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Overall Performance")
+                    Text("Performance Benchmark")
                         .font(.headline)
-                    Text("Last 4 months")
+                    Text(scannedBreed != nil ? "Detected: \(scannedBreed!)" : "Overall Herd Analysis")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
             
-            VStack(spacing: 8) {
-                Text(String(format: "%.1f L/day", analytics?.average_yield ?? 0.0))
-                    .font(.system(size: 34, weight: .black))
-                    .foregroundColor(.primary)
-                
-                HStack(spacing: 4) {
-                    Image(systemName: "chart.line.uptrend.xyaxis")
-                    Text("Current Herd Average")
+            HStack(spacing: 0) {
+                VStack(spacing: 8) {
+                    Text(String(format: "%.1f L", analytics?.average_yield ?? 0.0))
+                        .font(.system(size: 28, weight: .black))
+                        .foregroundColor(.primary)
+                    Text("Herd Avg")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.secondary)
                 }
-                .font(.subheadline.bold())
-                .foregroundColor(.green)
+                .frame(maxWidth: .infinity)
+                
+                if let breed = scannedBreed {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 1, height: 40)
+                        .padding(.horizontal, 10)
+                    
+                    VStack(spacing: 8) {
+                        Text(scannedYield.replacingOccurrences(of: " Litres/day", with: ""))
+                            .font(.system(size: 28, weight: .black))
+                            .foregroundColor(.green)
+                        Text("\(breed) Potential")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 30)
-            .background(Color.purple.opacity(0.03))
+            .padding(.vertical, 24)
+            .background(Color.purple.opacity(0.04))
             .cornerRadius(20)
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
