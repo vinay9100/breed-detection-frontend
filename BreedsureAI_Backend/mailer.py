@@ -1,0 +1,48 @@
+from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
+from pydantic import EmailStr
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+conf = ConnectionConfig(
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME"),
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD"),
+    MAIL_FROM = os.getenv("MAIL_FROM"),
+    MAIL_PORT = int(os.getenv("MAIL_PORT", 465)),
+    MAIL_SERVER = os.getenv("MAIL_SERVER"),
+    MAIL_STARTTLS = os.getenv("MAIL_STARTTLS", "False").lower() == "true",
+    MAIL_SSL_TLS = os.getenv("MAIL_SSL_TLS", "True").lower() == "true",
+    USE_CREDENTIALS = True,
+    VALIDATE_CERTS = False
+)
+
+async def send_otp_email(email: EmailStr, otp: str):
+    # Added OTP logging to console for easy access during development/testing
+    print(f"DEVELOPER LOG: Sending OTP [{otp}] to email: {email}")
+
+    html = f"""
+    <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+        <h2>BreedSure AI</h2>
+        <p>Your verification code is:</p>
+        <h1 style="color: #00A661; letter-spacing: 5px;">{otp}</h1>
+        <p>This code will expire in 10 minutes.</p>
+    </div>
+    """
+
+    message = MessageSchema(
+        subject="Your BSAI Verification Code",
+        recipients=[email],
+        body=html,
+        subtype=MessageType.html
+    )
+
+    try:
+        fm = FastMail(conf)
+        await fm.send_message(message)
+        print(f"OTP email sent successfully to: {email}")
+    except Exception as e:
+        print(f"CRITICAL ERROR sending email to {email}: {e}")
+        # Log more details if possible
+        import traceback
+        traceback.print_exc()

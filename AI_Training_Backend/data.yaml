@@ -1,5 +1,0 @@
-train: ../data/train/images
-val: ../data/val/images
-
-nc: 9
-names: ['Holstein_Friesian', 'Jersey', 'Brown_Swiss', 'Gir', 'Sahiwal', 'Murrah', 'Jaffrabadi', 'Pandharpuri', 'Toda']
