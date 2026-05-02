@@ -43,9 +43,9 @@ class AuthManager: ObservableObject {
     }		
     
     // IMPORTANT: If using a real device, change this to your Mac's Local IP (e.g. "http://192.168.1.10:8000")
-  //public let baseURL = "http://180.235.121.245:8026"
+  public let baseURL = "http://180.235.121.245:8026"
     
-    public let baseURL = "http://localhost:8000"
+  //  public let baseURL = "http://localhost:8000"
 
    // public let baseURL = "http://localhost/"
     
