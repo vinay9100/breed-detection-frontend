@@ -40,15 +40,32 @@ class AuthManager: ObservableObject {
                 isAuthenticated = false
             }
         }
-    }
+    }		
     
     // IMPORTANT: If using a real device, change this to your Mac's Local IP (e.g. "http://192.168.1.10:8000")
-    public let baseURL = "http://127.0.0.1:8000"
+  //public let baseURL = "http://180.235.121.245:8026"
+    
+    public let baseURL = "http://localhost:8000"
+
+   // public let baseURL = "http://localhost/"
     
     init() {
         self.authToken = UserDefaults.standard.string(forKey: "authToken")
+        
+        // 🔔 Request notification permissions early
+        NotificationManager.shared.requestAuthorization()
+        
         if self.authToken != nil {
-            self.fetchMe { _ in }
+            self.fetchMe { result in
+                if case .success = result {
+                    // 🔄 Prefetch and sync vaccination reminders on launch
+                    self.fetchVaccinations { vaxResult in
+                        if case .success(let data) = vaxResult {
+                            NotificationManager.shared.syncVaccinationReminders(records: data)
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -1572,7 +1589,7 @@ class LocalizationManager: ObservableObject {
             "profile_settings": "सेटिंग्स",
             "profile_notifications": "सूचनाएं",
             "profile_help": "सहायता और समर्थन",
-            "profile_about": "BreedSureAI के बारे में",
+            "profile_about": "Breedly के बारे में",
             "profile_logout": "लॉग आउट",
             "profile_delete": "खाता हटाएं",
             "profile_animals": "जानवर",
@@ -1686,7 +1703,7 @@ class LocalizationManager: ObservableObject {
             "profile_settings": "அமைப்புகள்",
             "profile_notifications": "அறிவிப்புகள்",
             "profile_help": "உதவி மற்றும் ஆதரவு",
-            "profile_about": "BreedSureAI பற்றி",
+            "profile_about": "Breedly பற்றி",
             "profile_logout": "வெளியேறு",
             "profile_delete": "கணக்கை நீக்கு",
             "profile_animals": "விலங்குகள்",
@@ -1816,3 +1833,79 @@ extension View {
     }
 }
 
+import Foundation
+import UserNotifications
+import SwiftUI
+
+class NotificationManager {
+    static let shared = NotificationManager()
+    
+    @AppStorage("notif_vaccination_reminders") private var vaccinationRemindersEnabled: Bool = true
+    
+    func requestAuthorization() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if granted {
+                print("✅ Notification authorization granted")
+            } else if let error = error {
+                print("❌ Notification authorization denied: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    func scheduleVaccinationReminder(for record: VaccinationRecord) {
+        guard vaccinationRemindersEnabled else { return }
+        
+        let content = UNMutableNotificationContent()
+        content.title = "Vaccination Due: \(record.vaccine_name)"
+        content.body = "It's time for the \(record.type ?? "scheduled") vaccination. Protect your livestock today!"
+        content.sound = .default
+        content.userInfo = ["route": "vaccinationPlanner", "id": record.id]
+        
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = formatter.date(from: record.planned_date)
+        if date == nil {
+            formatter.formatOptions = [.withInternetDateTime]
+            date = formatter.date(from: record.planned_date)
+        }
+        
+        guard let reminderDate = date else { return }
+        
+        // Schedule for 8:00 AM on the planned date
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: reminderDate)
+        components.hour = 8
+        components.minute = 0
+        
+        // If the date is in the past, don't schedule
+        if let finalDate = Calendar.current.date(from: components), finalDate < Date() {
+            return
+        }
+        
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let identifier = "vaccination_\(record.id)"
+        
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("❌ Error scheduling notification: \(error.localizedDescription)")
+            } else {
+                print("✅ Scheduled vaccination reminder for \(record.vaccine_name) on \(components)")
+            }
+        }
+    }
+    
+    func cancelVaccinationReminder(for recordId: Int) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["vaccination_\(recordId)"])
+    }
+    
+    func syncVaccinationReminders(records: [VaccinationRecord]) {
+        // Clear old ones first to avoid duplicates or outdated info
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        
+        // Reschedule all upcoming ones
+        for record in records where record.status != "completed" {
+            scheduleVaccinationReminder(for: record)
+        }
+    }
+}

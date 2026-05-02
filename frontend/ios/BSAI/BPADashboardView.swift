@@ -12,6 +12,9 @@ struct BPADashboardView: View {
     @State private var activities: [RecentActivity] = []
     @State private var analytics: AnalyticsSummaryResponse? = nil
     @State private var isLoading = false
+    @State private var showDeleteConfirmation = false
+    @State private var showErrorAlert = false
+    @State private var errorMessage = ""
     
     var body: some View {
         ZStack {
@@ -76,6 +79,27 @@ struct BPADashboardView: View {
             withAnimation {
                 appeared = true
             }
+        }
+        .alert("Delete Account", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                AuthManager.shared.deleteAccount { result in
+                    switch result {
+                    case .success:
+                        path.removeAll()
+                    case .failure(let error):
+                        errorMessage = error.localizedDescription
+                        showErrorAlert = true
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to permanently delete your BPA account? This action cannot be undone.")
+        }
+        .alert("Error", isPresented: $showErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
         }
     }
     
@@ -142,7 +166,7 @@ struct BPADashboardView: View {
                     Spacer()
                     
                     Button(action: {
-                        AuthManager.shared.authToken = nil
+                        AuthManager.shared.logout()
                         path.removeAll()
                     }) {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
@@ -223,6 +247,9 @@ struct BPADashboardView: View {
                 }
                 BPAActionButton(icon: "chart.bar.xaxis", iconColor: .orange, title: "Analytics") {
                     path.append(.bpaAnalytics)
+                }
+                BPAActionButton(icon: "trash.fill", iconColor: .red, title: "Delete Account") {
+                    showDeleteConfirmation = true
                 }
             }
             .padding(.horizontal, 24)
